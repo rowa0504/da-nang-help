@@ -8,7 +8,8 @@
     "packageManager": "pnpm@10.24.0",
     "scripts": {
         "build": "vite build --config vite.config.ts",
-        "dev": "vite --config vite.config.ts"
+        "dev": "vite --config vite.config.ts",
+        "typecheck": "tsc --noEmit"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
