@@ -24,9 +24,22 @@ export default function Dashboard() {
                 Signed in as <strong>{user.name}</strong> ({user.email}) — role: <strong>{user.role}</strong>
             </p>
 
-            {user.role === 'customer' && <p>Customer dashboard placeholder — Phase 4+ will add request posting here.</p>}
+            {user.role === 'customer' && (
+                <p>
+                    <Link href="/requests/create">Post a new request</Link> · <Link href="/requests">View my requests</Link>
+                </p>
+            )}
 
-            {user.role === 'provider' && <ProviderStatus status={user.provider_verification_status} />}
+            {user.role === 'provider' && (
+                <>
+                    <ProviderStatus status={user.provider_verification_status} />
+                    {user.provider_verification_status === 'approved' && (
+                        <p>
+                            <Link href="/provider/requests">Browse the request feed</Link>
+                        </p>
+                    )}
+                </>
+            )}
 
             {user.role === 'admin' && (
                 <p>

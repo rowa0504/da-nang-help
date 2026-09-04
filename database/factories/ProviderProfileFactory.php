@@ -39,12 +39,23 @@ class ProviderProfileFactory extends Factory
     /**
      * Attach this profile to a specific, already-created Provider user
      * instead of the random one `configure()` creates by default.
+     *
+     * Uses Laravel's for() rather than an afterMaking() override: for()
+     * resolves during raw-attribute building, which always completes before
+     * afterMaking() runs, so configure()'s `user_id ??= ...` correctly sees
+     * user_id already set and skips creating a throwaway default user. An
+     * afterMaking()-based override would still be evaluated *after*
+     * configure()'s default-creation callback (afterMaking callbacks fire
+     * in registration order, and configure() always registers first), so
+     * the default user would be created and then immediately discarded on
+     * every call regardless of chaining order.
+     *
+     * Does not validate that $user actually has the Provider role; callers
+     * are responsible for passing a suitable User.
      */
     public function forUser(User $user): static
     {
-        return $this->afterMaking(function (ProviderProfile $profile) use ($user) {
-            $profile->user_id = $user->id;
-        });
+        return $this->for($user, 'user');
     }
 
     public function approved(): static

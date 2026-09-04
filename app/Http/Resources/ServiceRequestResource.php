@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Resources;
+
+use App\Enums\UserRole;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
+
+/**
+ * Shapes a ServiceRequest for the current viewer. Whether the viewer is
+ * *allowed* to see this resource at all (Provider category/area matching,
+ * moderation_status, etc.) is decided entirely by ServiceRequestPolicy
+ * before this class ever runs — this class only decides *what* to show
+ * once that's already settled, so the two never drift out of sync.
+ */
+class ServiceRequestResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        $viewer = $request->user();
+        $canSeePrivate = $viewer !== null
+            && ($viewer->id === $this->customer_id || $viewer->role === UserRole::Admin);
+        $viewerLocale = $viewer->locale ?? 'en';
+
+        return [
+            'id' => $this->id,
+            'title' => $this->translatedTitleFor($viewerLocale),
+            'description' => $this->translatedDescriptionFor($viewerLocale),
+            'category' => [
+                'id' => $this->category_id,
+                'name' => $this->category->translations->first()?->name ?? $this->category->slug,
+            ],
+            'area' => [
+                'id' => $this->area_id,
+                'name' => $this->area->name,
+            ],
+            'urgency' => $this->urgency->value,
+            'status' => $this->status->value,
+            'created_at' => $this->created_at->toIso8601String(),
+            'photos' => $this->photos->map(fn ($photo) => [
+                'id' => $photo->id,
+                'url' => Storage::disk(config('filesystems.default'))->temporaryUrl($photo->object_key, now()->addMinutes(15)),
+            ]),
+            ...$canSeePrivate ? [
+                'address_text' => $this->address_text,
+                'lat' => (float) $this->lat,
+                'lng' => (float) $this->lng,
+                'customer' => [
+                    'name' => $this->customer->name,
+                    'email' => $this->customer->email,
+                    'phone' => $this->customer->phone,
+                ],
+            ] : [],
+        ];
+    }
+}
