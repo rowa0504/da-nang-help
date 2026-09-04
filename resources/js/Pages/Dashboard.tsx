@@ -25,12 +25,53 @@ export default function Dashboard() {
             </p>
 
             {user.role === 'customer' && <p>Customer dashboard placeholder — Phase 4+ will add request posting here.</p>}
-            {user.role === 'provider' && <p>Provider dashboard placeholder — Phase 3+ will add profile/category/area setup here.</p>}
-            {user.role === 'admin' && <p>Admin dashboard placeholder — Phase 9 will add moderation tools here.</p>}
+
+            {user.role === 'provider' && <ProviderStatus status={user.provider_verification_status} />}
+
+            {user.role === 'admin' && (
+                <p>
+                    Admin dashboard placeholder — Phase 9 will add moderation tools here. <Link href="/admin/providers">Review pending providers</Link>
+                </p>
+            )}
 
             <Link href="/logout" method="post" as="button">
                 Log out
             </Link>
         </main>
     );
+}
+
+function ProviderStatus({ status }: { status?: string | null }) {
+    if (!status) {
+        return (
+            <p>
+                You haven&apos;t set up a provider profile yet. <Link href="/provider/profile">Set up your profile</Link>
+            </p>
+        );
+    }
+
+    switch (status) {
+        case 'pending':
+            return (
+                <p>
+                    Your provider profile is under review. <Link href="/provider/profile">View your submission</Link>
+                </p>
+            );
+        case 'approved':
+            return (
+                <p>
+                    Your provider profile is approved. <Link href="/provider/profile">View your profile</Link>
+                </p>
+            );
+        case 'rejected':
+            return (
+                <p>
+                    Your provider profile was rejected. <Link href="/provider/profile">Update and resubmit</Link>
+                </p>
+            );
+        case 'suspended':
+            return <p>Your provider account is currently suspended.</p>;
+        default:
+            return null;
+    }
 }

@@ -11,3 +11,5 @@ Route::get('/', function () {
 Route::middleware('auth')->get('/dashboard', DashboardController::class)->name('dashboard');
 
 require __DIR__.'/auth.php';
+require __DIR__.'/provider.php';
+require __DIR__.'/admin.php';

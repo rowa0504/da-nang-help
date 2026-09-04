@@ -14,11 +14,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // DemoUserSeeder guards itself against running outside local/testing,
-        // but the check is duplicated here so this intent is visible without
-        // having to open the other file.
+        // Each of these seeders guards itself against running outside
+        // local/testing, but the check is duplicated here so this intent is
+        // visible without having to open the other files. Order matters:
+        // DemoProviderProfileSeeder depends on categories/areas/the demo
+        // provider user already existing.
         if (app()->environment(['local', 'testing'])) {
+            $this->call(CategorySeeder::class);
+            $this->call(AreaSeeder::class);
             $this->call(DemoUserSeeder::class);
+            $this->call(DemoProviderProfileSeeder::class);
         }
     }
 }

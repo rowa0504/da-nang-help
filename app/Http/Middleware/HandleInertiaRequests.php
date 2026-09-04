@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserRole;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -37,6 +38,10 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
+        $providerProfile = $user && $user->role === UserRole::Provider
+            ? $user->providerProfile
+            : null;
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -46,6 +51,10 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'role' => $user->role->value,
                     'locale' => $user->locale,
+                    ...$user->role === UserRole::Provider ? [
+                        'has_provider_profile' => $providerProfile !== null,
+                        'provider_verification_status' => $providerProfile?->verification_status?->value,
+                    ] : [],
                 ] : null,
             ],
         ];
