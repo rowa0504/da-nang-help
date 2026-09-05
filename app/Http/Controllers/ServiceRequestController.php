@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Exceptions\InvalidServiceRequestTransitionException;
 use App\Http\Requests\ServiceRequest\CancelServiceRequestRequest;
 use App\Http\Requests\ServiceRequest\CreateServiceRequestRequest;
+use App\Http\Resources\JobResource;
 use App\Http\Resources\OfferResource;
 use App\Http\Resources\ServiceRequestResource;
 use App\Models\Area;
@@ -93,7 +94,23 @@ class ServiceRequestController extends Controller
             'area',
             'photos',
             'translations',
+            'serviceJob.customer',
+            'serviceJob.provider.providerProfile',
         ]);
+
+        $job = $serviceRequest->serviceJob;
+        // Avoid JobResource lazy-loading a second, separate ServiceRequest
+        // instance via $job->serviceRequest — point it back at the one
+        // we've already loaded and populated above.
+        $job?->setRelation('serviceRequest', $serviceRequest);
+
+        $jobProp = null;
+        if ($job !== null
+            && ($request->user()->id === $job->customer_id
+                || $request->user()->id === $job->provider_id
+                || $request->user()->role === UserRole::Admin)) {
+            $jobProp = (new JobResource($job))->resolve($request);
+        }
 
         $myOffer = null;
         $canOffer = false;
@@ -115,6 +132,7 @@ class ServiceRequestController extends Controller
             'request' => (new ServiceRequestResource($serviceRequest))->resolve($request),
             'myOffer' => $myOffer,
             'canOffer' => $canOffer,
+            'job' => $jobProp,
         ]);
     }
 

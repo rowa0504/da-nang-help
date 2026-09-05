@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    // Phase 6: days after a Provider's completion report before an
+    // unconfirmed Job is auto-completed (FR-38).
+    'auto_confirm_days' => env('AUTO_CONFIRM_DAYS', 3),
+
 ];

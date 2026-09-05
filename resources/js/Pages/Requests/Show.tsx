@@ -1,11 +1,12 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import { OfferData, ServiceRequestData, SharedProps } from '@/types';
+import { JobData, OfferData, ServiceRequestData, SharedProps } from '@/types';
 
 interface Props {
     request: ServiceRequestData;
     myOffer: OfferData | null;
     canOffer: boolean;
+    job: JobData | null;
 }
 
 const linkClass = 'text-blue-600 underline hover:text-blue-800';
@@ -28,7 +29,7 @@ function toDatetimeLocalValue(iso?: string | null): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function Show({ request, myOffer, canOffer }: Props) {
+export default function Show({ request, myOffer, canOffer, job }: Props) {
     const { auth, flash } = usePage<SharedProps>().props;
     const { patch, processing } = useForm();
 
@@ -115,6 +116,14 @@ export default function Show({ request, myOffer, canOffer }: Props) {
 
             {auth.user?.role === 'provider' && (canOffer || myOffer) && (
                 <OfferSection requestId={request.id} myOffer={myOffer} canOffer={canOffer} />
+            )}
+
+            {job && (
+                <p className="mt-4">
+                    <Link href={`/jobs/${job.id}`} className={linkClass}>
+                        View job
+                    </Link>
+                </p>
             )}
 
             <p className="mt-4">

@@ -109,3 +109,24 @@ export interface OfferData {
     original_message?: string;
     source_locale?: string;
 }
+
+export type JobStatus = 'assigned' | 'in_progress' | 'awaiting_confirmation' | 'completed' | 'cancelled';
+
+export interface JobData {
+    id: number;
+    agreed_price: string; // decimal cast string, kept as-is — never converted to number
+    currency: string;
+    status: JobStatus;
+    provider_completed_at: string | null;
+    customer_confirmed_at: string | null;
+    auto_confirm_at: string | null;
+    completed_at: string | null;
+    cancelled_at: string | null;
+    created_at: string;
+    // Only reachable once JobPolicy::view() has confirmed the viewer is this
+    // job's Customer, its Provider, or an Admin — see JobResource, and the
+    // same note on ServiceRequestData above.
+    service_request: { id: number; title: string; address_text: string; lat: number; lng: number };
+    customer: { name: string; phone: string | null };
+    provider: { name: string; phone: string | null; business_name: string | null };
+}

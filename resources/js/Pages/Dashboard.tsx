@@ -26,7 +26,8 @@ export default function Dashboard() {
 
             {user.role === 'customer' && (
                 <p>
-                    <Link href="/requests/create">Post a new request</Link> · <Link href="/requests">View my requests</Link>
+                    <Link href="/requests/create">Post a new request</Link> · <Link href="/requests">View my requests</Link> ·{' '}
+                    <Link href="/jobs">My jobs</Link>
                 </p>
             )}
 
@@ -38,6 +39,9 @@ export default function Dashboard() {
                             <Link href="/provider/requests">Browse the request feed</Link>
                         </p>
                     )}
+                    <p>
+                        <Link href="/jobs">My jobs</Link>
+                    </p>
                 </>
             )}
 

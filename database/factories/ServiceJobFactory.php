@@ -44,4 +44,36 @@ class ServiceJobFactory extends Factory
             'status' => ServiceJobStatus::Assigned->value,
         ];
     }
+
+    public function inProgress(): static
+    {
+        return $this->state(fn () => ['status' => ServiceJobStatus::InProgress->value]);
+    }
+
+    public function awaitingConfirmation(): static
+    {
+        return $this->state(fn () => [
+            'status' => ServiceJobStatus::AwaitingConfirmation->value,
+            'provider_completed_at' => now(),
+            'auto_confirm_at' => now()->addDays(3),
+        ]);
+    }
+
+    public function completed(): static
+    {
+        return $this->state(fn () => [
+            'status' => ServiceJobStatus::Completed->value,
+            'provider_completed_at' => now()->subDay(),
+            'customer_confirmed_at' => now(),
+            'completed_at' => now(),
+        ]);
+    }
+
+    public function cancelled(): static
+    {
+        return $this->state(fn () => [
+            'status' => ServiceJobStatus::Cancelled->value,
+            'cancelled_at' => now(),
+        ]);
+    }
 }

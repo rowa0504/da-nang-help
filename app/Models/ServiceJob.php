@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\ServiceJobStatus;
+use App\Policies\JobPolicy;
 use Database\Factories\ServiceJobFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * the ER diagram but is not read or written until Phase 6.
  */
 #[Fillable([])]
+#[UsePolicy(JobPolicy::class)]
 class ServiceJob extends Model
 {
     /** @use HasFactory<ServiceJobFactory> */

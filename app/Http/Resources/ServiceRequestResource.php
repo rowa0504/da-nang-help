@@ -18,8 +18,16 @@ class ServiceRequestResource extends JsonResource
     public function toArray($request): array
     {
         $viewer = $request->user();
+        // Only consult the serviceJob relation if it was actually eager
+        // loaded by the caller (ServiceRequestController::show()) — feed/
+        // list endpoints never load it (they only ever show `open` requests,
+        // which by definition have no Job yet), and touching it there would
+        // trigger a lazy-loaded N+1 for every row.
+        $assignedProviderId = $this->relationLoaded('serviceJob') ? $this->serviceJob?->provider_id : null;
         $canSeePrivate = $viewer !== null
-            && ($viewer->id === $this->customer_id || $viewer->role === UserRole::Admin);
+            && ($viewer->id === $this->customer_id
+                || $viewer->role === UserRole::Admin
+                || $viewer->id === $assignedProviderId);
         $viewerLocale = $viewer->locale ?? 'en';
 
         return [
