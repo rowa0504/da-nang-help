@@ -93,3 +93,19 @@ export interface PaginatedData<T> {
     links: PaginationLinks;
     meta: PaginationMeta;
 }
+
+export type OfferStatus = 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'cancelled';
+
+export interface OfferData {
+    id: number;
+    price: string; // decimal cast string, kept as-is — never converted to number
+    currency: string;
+    message: string;
+    available_at: string | null; // UTC ISO 8601
+    status: OfferStatus;
+    created_at: string;
+    provider: { id: number; business_name: string | null; avg_rating: string; completed_jobs_count: number };
+    // Present only for the offering Provider themself or an Admin.
+    original_message?: string;
+    source_locale?: string;
+}

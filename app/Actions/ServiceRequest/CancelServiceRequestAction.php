@@ -2,9 +2,11 @@
 
 namespace App\Actions\ServiceRequest;
 
+use App\Enums\OfferStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidServiceRequestTransitionException;
+use App\Models\Offer;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,12 @@ class CancelServiceRequestAction
             $locked->status = ServiceRequestStatus::Cancelled;
             $locked->cancelled_at = now();
             $locked->save();
+
+            // FR-12: any unconfirmed offer on a cancelled request is
+            // invalidated too.
+            Offer::where('service_request_id', $locked->id)
+                ->where('status', OfferStatus::Pending->value)
+                ->update(['status' => OfferStatus::Cancelled->value, 'cancelled_at' => now()]);
 
             return $locked;
         });

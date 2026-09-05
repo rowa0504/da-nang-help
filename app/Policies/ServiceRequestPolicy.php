@@ -6,6 +6,7 @@ use App\Enums\ProviderVerificationStatus;
 use App\Enums\ServiceRequestModerationStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\UserRole;
+use App\Models\Offer;
 use App\Models\ServiceRequest;
 use App\Models\User;
 
@@ -30,7 +31,11 @@ class ServiceRequestPolicy
     /**
      * The posting Customer and Admin may always view, regardless of
      * moderation_status. An approved Provider whose category/area match may
-     * view only while the request is open and visible.
+     * view while the request is open and visible; once the request leaves
+     * `open` (assigned/cancelled), a Provider who already has an offer on
+     * it may keep viewing the public fields and their own offer's status
+     * (Phase 5). A hidden request is never viewable by a Provider, even one
+     * with an existing offer.
      */
     public function view(User $user, ServiceRequest $serviceRequest): bool
     {
@@ -38,10 +43,21 @@ class ServiceRequestPolicy
             return true;
         }
 
-        return $user->role === UserRole::Provider
-            && $serviceRequest->status === ServiceRequestStatus::Open
-            && $serviceRequest->moderation_status === ServiceRequestModerationStatus::Visible
-            && $this->providerMatches($user, $serviceRequest);
+        if ($user->role !== UserRole::Provider) {
+            return false;
+        }
+
+        if ($serviceRequest->moderation_status !== ServiceRequestModerationStatus::Visible) {
+            return false;
+        }
+
+        if ($serviceRequest->status === ServiceRequestStatus::Open) {
+            return $this->providerMatches($user, $serviceRequest);
+        }
+
+        return Offer::where('service_request_id', $serviceRequest->id)
+            ->where('provider_id', $user->id)
+            ->exists();
     }
 
     /**

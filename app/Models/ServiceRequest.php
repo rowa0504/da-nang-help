@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['title', 'description', 'category_id', 'area_id', 'address_text', 'lat', 'lng', 'urgency', 'source_locale'])]
 #[Hidden(['address_text', 'lat', 'lng'])]
@@ -60,6 +61,16 @@ class ServiceRequest extends Model
     public function translations(): HasMany
     {
         return $this->hasMany(ServiceRequestTranslation::class);
+    }
+
+    public function offers(): HasMany
+    {
+        return $this->hasMany(Offer::class);
+    }
+
+    public function serviceJob(): HasOne
+    {
+        return $this->hasOne(ServiceJob::class);
     }
 
     public function hiddenBy(): BelongsTo
