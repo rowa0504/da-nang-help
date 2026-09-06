@@ -40,6 +40,8 @@ export interface ProviderProfileData {
     verification_status: ProviderVerificationStatus;
     category_ids: number[];
     area_ids: number[];
+    avg_rating: string; // decimal cast string, kept as-is — never converted to number
+    completed_jobs_count: number;
 }
 
 export type ServiceRequestStatus = 'open' | 'assigned' | 'cancelled';
@@ -129,4 +131,26 @@ export interface JobData {
     service_request: { id: number; title: string; address_text: string; lat: number; lng: number };
     customer: { name: string; phone: string | null };
     provider: { name: string; phone: string | null; business_name: string | null };
+    // null if no review yet, or if a hidden review is being withheld from
+    // this viewer (the Provider being reviewed never sees a hidden one).
+    review: ReviewData | null;
+}
+
+export interface ReviewData {
+    id: number;
+    rating: number;
+    comment: string | null;
+    is_hidden: boolean;
+    created_at: string;
+}
+
+export interface AdminReviewData {
+    id: number;
+    job_id: number;
+    rater_name: string;
+    ratee_name: string;
+    rating: number;
+    comment: string | null;
+    is_hidden: boolean;
+    created_at: string;
 }

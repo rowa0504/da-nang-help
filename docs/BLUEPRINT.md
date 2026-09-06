@@ -365,7 +365,7 @@ FR番号はDraft v0.3.1で再度振り直しています。
 ### レビュー管理
 
 - **FR-40** Job完了確定後、CustomerはProviderに対し星評価（1〜5）とコメントを投稿できる
-- **FR-41** Providerプロフィールに表示する平均評価・完了件数は、`is_hidden = true` のレビューを除外して算出する
+- **FR-41** Providerプロフィールに表示する平均評価は、`is_hidden = true` のレビューを除外して算出する。完了件数（`completed_jobs_count`）はJobの完了実績（Phase 6の`CompleteJobAction`）に基づく独立した値であり、レビューの投稿・非表示化によって変動しない
 - **FR-42** Adminは不適切なレビューを`is_hidden`により論理的に非表示にできる（`hidden_at`/`hidden_by`を記録）が、レビュー本文・評価値そのものを書き換えることはできない
 
 ### 通知
@@ -812,7 +812,7 @@ erDiagram
 | `offer_translations` | `(offer_id, locale)` UNIQUE |
 | `jobs` | `service_request_id` UNIQUE |
 | `jobs` | `offer_id` UNIQUE |
-| `reviews` | `(job_id, rater_id)` UNIQUE |
+| `reviews` | `job_id` UNIQUE（Customer→Providerの一方向レビューのみのため。将来Provider→Customerを追加する場合は`(job_id, rater_id)`の複合UNIQUEへ移行する） |
 
 アプリケーションレベル、または適用可能な範囲でDB CHECK制約により、以下も保証します。
 

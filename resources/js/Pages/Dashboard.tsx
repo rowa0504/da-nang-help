@@ -47,7 +47,8 @@ export default function Dashboard() {
 
             {user.role === 'admin' && (
                 <p>
-                    Admin dashboard placeholder — Phase 9 will add moderation tools here. <Link href="/admin/providers">Review pending providers</Link>
+                    Admin dashboard placeholder — Phase 9 will add moderation tools here. <Link href="/admin/providers">Review pending providers</Link> ·{' '}
+                    <Link href="/admin/reviews">Manage reviews</Link>
                 </p>
             )}
 

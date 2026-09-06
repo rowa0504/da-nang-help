@@ -49,6 +49,10 @@ function ReadOnlyStatus({ profile, categories, areas }: { profile: ProviderProfi
                 <dd>{categoryNames.join(', ') || '—'}</dd>
                 <dt>Areas</dt>
                 <dd>{areaNames.join(', ') || '—'}</dd>
+                <dt>Average rating</dt>
+                <dd>{profile.avg_rating} / 5</dd>
+                <dt>Completed jobs</dt>
+                <dd>{profile.completed_jobs_count}</dd>
             </dl>
             <Link href="/dashboard">Back to dashboard</Link>
         </main>

@@ -29,6 +29,8 @@ class ProviderProfileController extends Controller
                 'verification_status' => $profile->verification_status->value,
                 'category_ids' => $profile->categories->pluck('id'),
                 'area_ids' => $profile->areas->pluck('id'),
+                'avg_rating' => $profile->avg_rating,
+                'completed_jobs_count' => $profile->completed_jobs_count,
             ] : null,
             // Phase 3: category display name is fixed to the `en` translation.
             // Locale-aware switching + fallback is Phase 8's job.

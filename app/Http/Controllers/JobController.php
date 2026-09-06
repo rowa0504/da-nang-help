@@ -21,7 +21,7 @@ class JobController extends Controller
     {
         $this->authorize('viewAny', ServiceJob::class);
 
-        $query = ServiceJob::query()->with(['serviceRequest', 'customer', 'provider.providerProfile']);
+        $query = ServiceJob::query()->with(['serviceRequest', 'customer', 'provider.providerProfile', 'review']);
 
         if ($request->user()->role !== UserRole::Admin) {
             $query->where(function ($q) use ($request) {
@@ -41,7 +41,7 @@ class JobController extends Controller
     {
         $this->authorize('view', $job);
 
-        $job->load(['serviceRequest', 'customer', 'provider.providerProfile']);
+        $job->load(['serviceRequest', 'customer', 'provider.providerProfile', 'review']);
 
         return Inertia::render('Jobs/Show', [
             'job' => (new JobResource($job))->resolve($request),

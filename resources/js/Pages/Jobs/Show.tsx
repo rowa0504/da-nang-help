@@ -1,5 +1,5 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { FormEvent, useState } from 'react';
 import { JobData, SharedProps } from '@/types';
 
 interface Props {
@@ -11,6 +11,10 @@ const primaryButtonClass =
     'rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
 const dangerButtonClass =
     'rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50';
+const fieldClass =
+    'mt-1 block w-full max-w-xl rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
+const labelClass = 'block text-sm font-medium text-gray-700';
+const errorClass = 'mt-1 text-sm text-red-600';
 
 export default function Show({ job }: Props) {
     const { auth } = usePage<SharedProps>().props;
@@ -108,6 +112,10 @@ export default function Show({ job }: Props) {
                 )}
             </div>
 
+            {job.status === 'completed' && (
+                <ReviewSection isCustomer={isCustomer} jobId={job.id} review={job.review} />
+            )}
+
             <p className="mt-6">
                 <Link href={`/requests/${job.service_request.id}`} className={linkClass}>
                     Back to request
@@ -118,5 +126,81 @@ export default function Show({ job }: Props) {
                 </Link>
             </p>
         </main>
+    );
+}
+
+type ReviewForm = {
+    rating: number;
+    comment: string;
+};
+
+function ReviewSection({ isCustomer, jobId, review }: { isCustomer: boolean; jobId: number; review: JobData['review'] }) {
+    if (review !== null) {
+        return (
+            <div className="mt-6 rounded border border-gray-200 p-4">
+                <h2 className="text-lg font-semibold text-gray-900">Review</h2>
+                <p className="mt-1 text-gray-800">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</p>
+                {review.comment && <p className="mt-2 text-gray-800">{review.comment}</p>}
+            </div>
+        );
+    }
+
+    if (!isCustomer) {
+        return null;
+    }
+
+    return <ReviewForm jobId={jobId} />;
+}
+
+function ReviewForm({ jobId }: { jobId: number }) {
+    const { data, setData, post, processing, errors } = useForm<ReviewForm>({
+        rating: 5,
+        comment: '',
+    });
+
+    function submit(e: FormEvent) {
+        e.preventDefault();
+        post(`/jobs/${jobId}/review`);
+    }
+
+    return (
+        <div className="mt-6 rounded border border-gray-200 p-4">
+            <h2 className="text-lg font-semibold text-gray-900">Leave a review</h2>
+            <form onSubmit={submit} className="mt-3 flex flex-col gap-4">
+                <div>
+                    <label className={labelClass}>
+                        Rating
+                        <select
+                            className={fieldClass}
+                            value={data.rating}
+                            onChange={(e) => setData('rating', Number(e.target.value))}
+                        >
+                            {[5, 4, 3, 2, 1].map((value) => (
+                                <option key={value} value={value}>
+                                    {value} star{value === 1 ? '' : 's'}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    {errors.rating && <div className={errorClass}>{errors.rating}</div>}
+                </div>
+
+                <div>
+                    <label className={labelClass}>
+                        Comment (optional)
+                        <textarea
+                            className={`${fieldClass} min-h-24`}
+                            value={data.comment}
+                            onChange={(e) => setData('comment', e.target.value)}
+                        />
+                    </label>
+                    {errors.comment && <div className={errorClass}>{errors.comment}</div>}
+                </div>
+
+                <button type="submit" disabled={processing} className={`${primaryButtonClass} self-start`}>
+                    Submit review
+                </button>
+            </form>
+        </div>
     );
 }

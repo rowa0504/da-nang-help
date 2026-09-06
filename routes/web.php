@@ -16,3 +16,4 @@ require __DIR__.'/admin.php';
 require __DIR__.'/requests.php';
 require __DIR__.'/offers.php';
 require __DIR__.'/jobs.php';
+require __DIR__.'/reviews.php';

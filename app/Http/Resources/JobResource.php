@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\UserRole;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
@@ -15,6 +16,17 @@ class JobResource extends JsonResource
 {
     public function toArray($request): array
     {
+        $viewer = $request->user();
+        $review = $this->review;
+        // Phase 7: a hidden review stays visible to the Customer who wrote
+        // it and to Admin (moderation/audit), but is withheld from the
+        // Provider it's about — otherwise Admin's hide action would do
+        // nothing but tweak the average.
+        $hideReviewFromViewer = $review !== null
+            && $review->is_hidden
+            && $viewer->id === $this->provider_id
+            && $viewer->role !== UserRole::Admin;
+
         return [
             'id' => $this->id,
             'agreed_price' => $this->agreed_price,
@@ -42,6 +54,13 @@ class JobResource extends JsonResource
                 'phone' => $this->provider->phone,
                 'business_name' => $this->provider->providerProfile?->business_name,
             ],
+            'review' => ($review !== null && ! $hideReviewFromViewer) ? [
+                'id' => $review->id,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'is_hidden' => $review->is_hidden,
+                'created_at' => $review->created_at->toIso8601String(),
+            ] : null,
         ];
     }
 }
