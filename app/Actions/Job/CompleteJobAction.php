@@ -3,9 +3,12 @@
 namespace App\Actions\Job;
 
 use App\Enums\JobCompletionMode;
+use App\Enums\NotificationType;
 use App\Enums\ServiceJobStatus;
 use App\Exceptions\InvalidJobTransitionException;
 use App\Exceptions\ProviderProfileMissingForJobException;
+use App\Jobs\SendNotificationEmailJob;
+use App\Models\Notification;
 use App\Models\ProviderProfile;
 use App\Models\ServiceJob;
 use Illuminate\Support\Facades\DB;
@@ -48,6 +51,13 @@ class CompleteJobAction
             $locked->save();
 
             $profile->increment('completed_jobs_count');
+
+            $notification = Notification::create([
+                'user_id' => $locked->provider_id,
+                'type' => NotificationType::JobCompleted,
+                'data' => ['job_id' => $locked->id],
+            ]);
+            SendNotificationEmailJob::dispatch($notification->id)->afterCommit();
 
             return $locked;
         });

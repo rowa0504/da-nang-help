@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\TranslationStatus;
 use App\Enums\UserRole;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -20,12 +21,19 @@ class OfferResource extends JsonResource
         $viewer = $request->user();
         $isOwnerOrAdmin = $viewer->id === $this->provider_id || $viewer->role === UserRole::Admin;
         $viewerLocale = $viewer->locale ?? 'en';
+        $isMessageTranslated = $viewerLocale !== $this->source_locale
+            && $this->translations->firstWhere('locale', $viewerLocale)?->translation_status === TranslationStatus::Completed;
 
         return [
             'id' => $this->id,
             'price' => $this->price, // decimal:2 cast string, never floated (see model)
             'currency' => $this->currency,
             'message' => $this->translatedMessageFor($viewerLocale),
+            'message_translation' => [
+                'is_translated' => $isMessageTranslated,
+                'source_locale' => $this->source_locale,
+                'original' => $this->message,
+            ],
             'available_at' => $this->available_at?->toIso8601String(),
             'status' => $this->status->value,
             'created_at' => $this->created_at->toIso8601String(),

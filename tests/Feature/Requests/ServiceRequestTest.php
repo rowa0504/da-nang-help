@@ -11,12 +11,15 @@ use App\Exceptions\InvalidServiceRequestTransitionException;
 use App\Jobs\TranslateServiceRequestJob;
 use App\Models\Area;
 use App\Models\Category;
+use App\Models\CategoryTranslation;
 use App\Models\ProviderProfile;
 use App\Models\ServiceRequest;
+use App\Models\ServiceRequestTranslation;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -499,5 +502,88 @@ class ServiceRequestTest extends TestCase
         // actingAs() persists for the rest of the test once called, so the
         // guest case gets its own test method (see the same note above).
         $this->get('/requests')->assertRedirect(route('login'));
+    }
+
+    public function test_translation_metadata_reflects_the_original_when_the_viewer_shares_the_source_locale(): void
+    {
+        $customer = User::factory()->create();
+        $customer->locale = 'en';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'title' => 'Fix my leaking AC',
+            'description' => 'Water is dripping.',
+            'source_locale' => 'en',
+        ]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('request.title_translation.is_translated', false)
+                ->where('request.title_translation.source_locale', 'en')
+                ->where('request.title_translation.original', 'Fix my leaking AC')
+                ->where('request.description_translation.is_translated', false)
+                ->where('request.description_translation.original', 'Water is dripping.')
+        );
+    }
+
+    public function test_translation_metadata_marks_a_completed_translation_as_translated(): void
+    {
+        $customer = User::factory()->create();
+        $customer->locale = 'ja';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'title' => 'Fix my leaking AC',
+            'description' => 'Water is dripping.',
+            'source_locale' => 'en',
+        ]);
+        ServiceRequestTranslation::factory()->completed()->create([
+            'service_request_id' => $serviceRequest->id,
+            'locale' => 'ja',
+            'title' => 'エアコンの水漏れを修理してください',
+            'description' => '水が漏れています。',
+        ]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('request.title', 'エアコンの水漏れを修理してください')
+                ->where('request.title_translation.is_translated', true)
+                ->where('request.title_translation.original', 'Fix my leaking AC')
+                ->where('request.description_translation.is_translated', true)
+                ->where('request.description_translation.original', 'Water is dripping.')
+        );
+    }
+
+    public function test_create_form_categories_do_not_trigger_n_plus_one_from_translations(): void
+    {
+        $customer = User::factory()->create();
+        $categories = Category::factory()->count(3)->create();
+        foreach ($categories as $category) {
+            CategoryTranslation::factory()->for($category)->create(['locale' => 'en']);
+        }
+
+        // Warm up first: the very first DB interaction in a test can carry
+        // one-off overhead unrelated to the N+1 behavior under test (same
+        // approach as JobTest::test_provider_feed_does_not_trigger_n_plus_one_from_service_job).
+        $this->actingAs($customer)->get('/requests/create')->assertOk();
+
+        DB::enableQueryLog();
+        $this->actingAs($customer)->get('/requests/create')->assertOk();
+        $queryCountForThree = count(DB::getQueryLog());
+        DB::flushQueryLog();
+
+        $moreCategories = Category::factory()->count(9)->create();
+        foreach ($moreCategories as $category) {
+            CategoryTranslation::factory()->for($category)->create(['locale' => 'en']);
+        }
+        DB::flushQueryLog();
+
+        $this->actingAs($customer)->get('/requests/create')->assertOk();
+        $queryCountForTwelve = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // Query count must not scale with the number of categories — if
+        // `translations` were lazy-loaded per category (instead of eager
+        // loaded before nameFor() resolves each name), quadrupling the
+        // category count would proportionally increase the query count.
+        $this->assertSame($queryCountForThree, $queryCountForTwelve);
     }
 }

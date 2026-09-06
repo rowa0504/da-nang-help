@@ -1,6 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { OfferData, PaginatedData } from '@/types';
+import { OfferData, OfferStatus, PaginatedData } from '@/types';
+import { AppLayout } from '@/Layouts/AppLayout';
+import { PaginationNav } from '@/Components/PaginationNav';
+import { TranslatedText } from '@/Components/TranslatedText';
+import { useTranslation } from '@/hooks/useTranslation';
+import { TranslationKey } from '@/lang/en';
 
 interface Props {
     serviceRequest: { id: number; title: string };
@@ -13,11 +18,22 @@ const primaryButtonClass =
 const dangerButtonClass =
     'rounded bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50';
 
+// Explicit, exhaustive correspondence table — a missing case here is a
+// compile error, never a silent fallback to an untranslated raw value.
+const OFFER_STATUS_KEYS: Record<OfferStatus, TranslationKey> = {
+    pending: 'status.offer.pending',
+    accepted: 'status.offer.accepted',
+    rejected: 'status.offer.rejected',
+    withdrawn: 'status.offer.withdrawn',
+    cancelled: 'status.offer.cancelled',
+};
+
 export default function Index({ serviceRequest, offers }: Props) {
+    const { t } = useTranslation();
     const [processingId, setProcessingId] = useState<number | null>(null);
 
     function accept(offer: OfferData) {
-        if (!confirm(`Accept this offer for ${offer.currency} ${offer.price}? This cannot be undone.`)) {
+        if (!confirm(t('offers.index.confirm_accept', { currency: offer.currency, price: offer.price }))) {
             return;
         }
         setProcessingId(offer.id);
@@ -25,7 +41,7 @@ export default function Index({ serviceRequest, offers }: Props) {
     }
 
     function reject(offer: OfferData) {
-        if (!confirm('Reject this offer?')) {
+        if (!confirm(t('offers.index.confirm_reject'))) {
             return;
         }
         setProcessingId(offer.id);
@@ -33,80 +49,67 @@ export default function Index({ serviceRequest, offers }: Props) {
     }
 
     return (
-        <main className="mx-auto max-w-3xl p-6 font-sans">
-            <Head title={`Offers for ${serviceRequest.title}`} />
-            <h1 className="text-2xl font-semibold text-gray-900">Offers for &ldquo;{serviceRequest.title}&rdquo;</h1>
-            <p className="mt-2">
-                <Link href={`/requests/${serviceRequest.id}`} className={linkClass}>
-                    Back to request
-                </Link>
-            </p>
+        <AppLayout>
+            <div className="mx-auto max-w-3xl p-6 font-sans">
+                <Head title={t('offers.index.heading', { title: serviceRequest.title })} />
+                <h1 className="text-2xl font-semibold text-gray-900">{t('offers.index.heading', { title: serviceRequest.title })}</h1>
+                <p className="mt-2">
+                    <Link href={`/requests/${serviceRequest.id}`} className={linkClass}>
+                        {t('nav.back_to_request')}
+                    </Link>
+                </p>
 
-            {offers.data.length === 0 && <p className="mt-4 text-gray-600">No offers yet.</p>}
+                {offers.data.length === 0 && <p className="mt-4 text-gray-600">{t('offers.index.empty')}</p>}
 
-            <ul className="mt-4 list-none space-y-4 p-0">
-                {offers.data.map((offer) => (
-                    <li key={offer.id} className="rounded border border-gray-200 p-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-lg font-semibold text-gray-900">
-                                {offer.currency} {offer.price}
-                            </span>
-                            <span className="text-sm text-gray-600">{offer.status}</span>
-                        </div>
-                        <p className="mt-2 text-gray-800">{offer.message}</p>
-                        {offer.available_at && (
-                            <p className="mt-1 text-sm text-gray-600">
-                                Available from: {new Date(offer.available_at).toLocaleString()}
-                            </p>
-                        )}
-                        <p className="mt-1 text-sm text-gray-600">
-                            {offer.provider.business_name} · rating {offer.provider.avg_rating} ·{' '}
-                            {offer.provider.completed_jobs_count} completed jobs
-                        </p>
-
-                        {offer.status === 'pending' && (
-                            <div className="mt-3 flex gap-2">
-                                <button
-                                    onClick={() => accept(offer)}
-                                    disabled={processingId === offer.id}
-                                    className={primaryButtonClass}
-                                >
-                                    Accept
-                                </button>
-                                <button
-                                    onClick={() => reject(offer)}
-                                    disabled={processingId === offer.id}
-                                    className={dangerButtonClass}
-                                >
-                                    Reject
-                                </button>
+                <ul className="mt-4 list-none space-y-4 p-0">
+                    {offers.data.map((offer) => (
+                        <li key={offer.id} className="rounded border border-gray-200 p-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-lg font-semibold text-gray-900">
+                                    {offer.currency} {offer.price}
+                                </span>
+                                <span className="text-sm text-gray-600">{t(OFFER_STATUS_KEYS[offer.status])}</span>
                             </div>
-                        )}
-                    </li>
-                ))}
-            </ul>
+                            <p className="mt-2 text-gray-800">
+                                <TranslatedText translation={offer.message_translation} translated={offer.message} />
+                            </p>
+                            {offer.available_at && (
+                                <p className="mt-1 text-sm text-gray-600">
+                                    {t('offers.index.available_from', { date: new Date(offer.available_at).toLocaleString() })}
+                                </p>
+                            )}
+                            <p className="mt-1 text-sm text-gray-600">
+                                {t('offers.index.provider_summary', {
+                                    business_name: offer.provider.business_name ?? '',
+                                    rating: offer.provider.avg_rating,
+                                    count: offer.provider.completed_jobs_count,
+                                })}
+                            </p>
 
-            <PaginationNav links={offers.meta.links} />
-        </main>
-    );
-}
+                            {offer.status === 'pending' && (
+                                <div className="mt-3 flex gap-2">
+                                    <button
+                                        onClick={() => accept(offer)}
+                                        disabled={processingId === offer.id}
+                                        className={primaryButtonClass}
+                                    >
+                                        {t('common.accept')}
+                                    </button>
+                                    <button
+                                        onClick={() => reject(offer)}
+                                        disabled={processingId === offer.id}
+                                        className={dangerButtonClass}
+                                    >
+                                        {t('common.reject')}
+                                    </button>
+                                </div>
+                            )}
+                        </li>
+                    ))}
+                </ul>
 
-function PaginationNav({ links }: { links: { url: string | null; label: string; active: boolean }[] }) {
-    return (
-        <nav className="mt-4 flex flex-wrap gap-2 text-sm">
-            {links.map((link, index) =>
-                link.url ? (
-                    <Link
-                        key={index}
-                        href={link.url}
-                        preserveScroll
-                        className={link.active ? `${linkClass} font-bold` : linkClass}
-                        dangerouslySetInnerHTML={{ __html: link.label }}
-                    />
-                ) : (
-                    <span key={index} className="text-gray-400" dangerouslySetInnerHTML={{ __html: link.label }} />
-                ),
-            )}
-        </nav>
+                <PaginationNav links={offers.meta.links} />
+            </div>
+        </AppLayout>
     );
 }

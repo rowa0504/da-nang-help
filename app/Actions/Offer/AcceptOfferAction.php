@@ -2,11 +2,14 @@
 
 namespace App\Actions\Offer;
 
+use App\Enums\NotificationType;
 use App\Enums\OfferStatus;
 use App\Enums\ServiceJobStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidOfferTransitionException;
+use App\Jobs\SendNotificationEmailJob;
+use App\Models\Notification;
 use App\Models\Offer;
 use App\Models\ServiceJob;
 use App\Models\ServiceRequest;
@@ -52,6 +55,13 @@ class AcceptOfferAction
             $job->currency = $lockedOffer->currency;
             $job->status = ServiceJobStatus::Assigned;
             $job->save();
+
+            $notification = Notification::create([
+                'user_id' => $lockedOffer->provider_id,
+                'type' => NotificationType::OfferAccepted,
+                'data' => ['offer_id' => $lockedOffer->id, 'service_request_id' => $lockedRequest->id],
+            ]);
+            SendNotificationEmailJob::dispatch($notification->id)->afterCommit();
 
             return $job;
         });

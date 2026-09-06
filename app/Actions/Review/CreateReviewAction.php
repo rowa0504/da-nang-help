@@ -2,11 +2,14 @@
 
 namespace App\Actions\Review;
 
+use App\Enums\NotificationType;
 use App\Enums\ServiceJobStatus;
 use App\Enums\UserRole;
 use App\Exceptions\DuplicateReviewException;
 use App\Exceptions\InvalidReviewTransitionException;
 use App\Exceptions\ProviderProfileMissingForReviewException;
+use App\Jobs\SendNotificationEmailJob;
+use App\Models\Notification;
 use App\Models\ProviderProfile;
 use App\Models\Review;
 use App\Models\ServiceJob;
@@ -63,6 +66,13 @@ class CreateReviewAction
             }
 
             $this->recalculate->handle($profile);
+
+            $notification = Notification::create([
+                'user_id' => $review->ratee_id,
+                'type' => NotificationType::ReviewPosted,
+                'data' => ['review_id' => $review->id],
+            ]);
+            SendNotificationEmailJob::dispatch($notification->id)->afterCommit();
 
             return $review;
         });

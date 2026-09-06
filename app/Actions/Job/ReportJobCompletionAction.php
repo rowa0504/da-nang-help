@@ -2,9 +2,12 @@
 
 namespace App\Actions\Job;
 
+use App\Enums\NotificationType;
 use App\Enums\ServiceJobStatus;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidJobTransitionException;
+use App\Jobs\SendNotificationEmailJob;
+use App\Models\Notification;
 use App\Models\ServiceJob;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +29,13 @@ class ReportJobCompletionAction
             $locked->provider_completed_at = now();
             $locked->auto_confirm_at = now()->addDays(config('services.auto_confirm_days'));
             $locked->save();
+
+            $notification = Notification::create([
+                'user_id' => $locked->customer_id,
+                'type' => NotificationType::JobCompletionReported,
+                'data' => ['job_id' => $locked->id],
+            ]);
+            SendNotificationEmailJob::dispatch($notification->id)->afterCommit();
 
             return $locked;
         });

@@ -62,4 +62,31 @@ class CategoryModelTest extends TestCase
         $this->expectException(QueryException::class);
         Category::factory()->create(['slug' => 'plumbing']);
     }
+
+    public function test_name_for_prefers_the_requested_locale(): void
+    {
+        $category = Category::factory()->create(['slug' => 'aircon-repair']);
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Air conditioner repair']);
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'ja', 'name' => 'エアコン修理']);
+        $category->load('translations');
+
+        $this->assertSame('エアコン修理', $category->nameFor('ja'));
+    }
+
+    public function test_name_for_falls_back_to_english_when_the_requested_locale_is_missing(): void
+    {
+        $category = Category::factory()->create(['slug' => 'plumbing']);
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Plumbing']);
+        $category->load('translations');
+
+        $this->assertSame('Plumbing', $category->nameFor('vi'));
+    }
+
+    public function test_name_for_falls_back_to_the_slug_when_no_translations_exist_at_all(): void
+    {
+        $category = Category::factory()->create(['slug' => 'gardening']);
+        $category->load('translations');
+
+        $this->assertSame('gardening', $category->nameFor('en'));
+    }
 }

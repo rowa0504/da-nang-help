@@ -1,5 +1,16 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { SharedProps } from '@/types';
+import { ProviderVerificationStatus, SharedProps } from '@/types';
+import { AppLayout } from '@/Layouts/AppLayout';
+import { useTranslation } from '@/hooks/useTranslation';
+import { TranslationKey } from '@/lang/en';
+
+// Explicit, exhaustive correspondence table — a missing case here is a
+// compile error, never a silent fallback to an untranslated raw value.
+const ROLE_KEYS: Record<'customer' | 'provider' | 'admin', TranslationKey> = {
+    customer: 'role.customer',
+    provider: 'role.provider',
+    admin: 'role.admin',
+};
 
 // NOTE: This role-based content switch is a *display* convenience only —
 // it is not a security boundary. Anyone can read/modify client-side JS, so
@@ -9,6 +20,7 @@ import { SharedProps } from '@/types';
 // switch to choose which already-authorized UI to render.
 export default function Dashboard() {
     const { auth } = usePage<SharedProps>().props;
+    const { t } = useTranslation();
     const user = auth.user;
 
     if (!user) {
@@ -17,53 +29,57 @@ export default function Dashboard() {
     }
 
     return (
-        <main style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
-            <Head title="Dashboard" />
-            <h1>Dashboard</h1>
-            <p>
-                Signed in as <strong>{user.name}</strong> ({user.email}) — role: <strong>{user.role}</strong>
-            </p>
-
-            {user.role === 'customer' && (
+        <AppLayout>
+            <div style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
+                <Head title={t('dashboard.title')} />
+                <h1>{t('dashboard.title')}</h1>
                 <p>
-                    <Link href="/requests/create">Post a new request</Link> · <Link href="/requests">View my requests</Link> ·{' '}
-                    <Link href="/jobs">My jobs</Link>
+                    {t('dashboard.signed_in_as', { name: user.name, email: user.email, role: t(ROLE_KEYS[user.role]) })}
                 </p>
-            )}
 
-            {user.role === 'provider' && (
-                <>
-                    <ProviderStatus status={user.provider_verification_status} />
-                    {user.provider_verification_status === 'approved' && (
-                        <p>
-                            <Link href="/provider/requests">Browse the request feed</Link>
-                        </p>
-                    )}
+                {user.role === 'customer' && (
                     <p>
-                        <Link href="/jobs">My jobs</Link>
+                        <Link href="/requests/create">{t('requests.post_new')}</Link> ·{' '}
+                        <Link href="/requests">{t('nav.view_my_requests')}</Link> · <Link href="/jobs">{t('nav.my_jobs')}</Link>
                     </p>
-                </>
-            )}
+                )}
 
-            {user.role === 'admin' && (
-                <p>
-                    Admin dashboard placeholder — Phase 9 will add moderation tools here. <Link href="/admin/providers">Review pending providers</Link> ·{' '}
-                    <Link href="/admin/reviews">Manage reviews</Link>
-                </p>
-            )}
+                {user.role === 'provider' && (
+                    <>
+                        <ProviderStatus status={user.provider_verification_status} />
+                        {user.provider_verification_status === 'approved' && (
+                            <p>
+                                <Link href="/provider/requests">{t('nav.browse_feed')}</Link>
+                            </p>
+                        )}
+                        <p>
+                            <Link href="/jobs">{t('nav.my_jobs')}</Link>
+                        </p>
+                    </>
+                )}
 
-            <Link href="/logout" method="post" as="button">
-                Log out
-            </Link>
-        </main>
+                {user.role === 'admin' && (
+                    <p>
+                        {t('dashboard.admin_placeholder')} <Link href="/admin/providers">{t('nav.review_pending_providers')}</Link> ·{' '}
+                        <Link href="/admin/reviews">{t('nav.manage_reviews')}</Link>
+                    </p>
+                )}
+
+                <Link href="/logout" method="post" as="button">
+                    {t('nav.logout')}
+                </Link>
+            </div>
+        </AppLayout>
     );
 }
 
-function ProviderStatus({ status }: { status?: string | null }) {
+function ProviderStatus({ status }: { status?: ProviderVerificationStatus | null }) {
+    const { t } = useTranslation();
+
     if (!status) {
         return (
             <p>
-                You haven&apos;t set up a provider profile yet. <Link href="/provider/profile">Set up your profile</Link>
+                {t('dashboard.provider_status.none')} <Link href="/provider/profile">{t('dashboard.provider_status.setup_link')}</Link>
             </p>
         );
     }
@@ -72,23 +88,26 @@ function ProviderStatus({ status }: { status?: string | null }) {
         case 'pending':
             return (
                 <p>
-                    Your provider profile is under review. <Link href="/provider/profile">View your submission</Link>
+                    {t('dashboard.provider_status.pending')}{' '}
+                    <Link href="/provider/profile">{t('dashboard.provider_status.view_submission')}</Link>
                 </p>
             );
         case 'approved':
             return (
                 <p>
-                    Your provider profile is approved. <Link href="/provider/profile">View your profile</Link>
+                    {t('dashboard.provider_status.approved')}{' '}
+                    <Link href="/provider/profile">{t('dashboard.provider_status.view_profile')}</Link>
                 </p>
             );
         case 'rejected':
             return (
                 <p>
-                    Your provider profile was rejected. <Link href="/provider/profile">Update and resubmit</Link>
+                    {t('dashboard.provider_status.rejected')}{' '}
+                    <Link href="/provider/profile">{t('dashboard.provider_status.update_resubmit')}</Link>
                 </p>
             );
         case 'suspended':
-            return <p>Your provider account is currently suspended.</p>;
+            return <p>{t('dashboard.provider_status.suspended')}</p>;
         default:
             return null;
     }

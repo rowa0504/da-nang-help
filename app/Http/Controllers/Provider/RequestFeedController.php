@@ -27,7 +27,7 @@ class RequestFeedController extends Controller
             ->whereIn('category_id', $categoryIds)
             ->whereIn('area_id', $areaIds)
             ->with([
-                'category.translations' => fn ($query) => $query->where('locale', 'en'),
+                'category.translations',
                 'area',
                 'photos',
                 'translations',

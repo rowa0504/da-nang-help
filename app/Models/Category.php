@@ -42,4 +42,17 @@ class Category extends Model
     {
         return $query->where('is_active', true)->orderBy('sort_order');
     }
+
+    /**
+     * Resolves the display name for a locale without re-querying: callers
+     * must eager load `translations` (all locales, not filtered to one) so
+     * this can fall back from the requested locale to English to the slug
+     * without an extra query per category.
+     */
+    public function nameFor(string $locale): string
+    {
+        return $this->translations->firstWhere('locale', $locale)?->name
+            ?? $this->translations->firstWhere('locale', 'en')?->name
+            ?? $this->slug;
+    }
 }

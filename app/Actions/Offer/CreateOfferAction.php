@@ -2,6 +2,7 @@
 
 namespace App\Actions\Offer;
 
+use App\Enums\NotificationType;
 use App\Enums\OfferStatus;
 use App\Enums\ProviderVerificationStatus;
 use App\Enums\ServiceRequestModerationStatus;
@@ -10,7 +11,9 @@ use App\Enums\TranslationStatus;
 use App\Enums\UserRole;
 use App\Exceptions\DuplicateOfferException;
 use App\Exceptions\InvalidOfferTransitionException;
+use App\Jobs\SendNotificationEmailJob;
 use App\Jobs\TranslateOfferJob;
+use App\Models\Notification;
 use App\Models\Offer;
 use App\Models\ServiceRequest;
 use App\Models\User;
@@ -72,6 +75,13 @@ class CreateOfferAction
                     'translation_status' => TranslationStatus::Pending,
                 ]);
             }
+
+            $notification = Notification::create([
+                'user_id' => $locked->customer_id,
+                'type' => NotificationType::OfferReceived,
+                'data' => ['offer_id' => $offer->id, 'service_request_id' => $locked->id],
+            ]);
+            SendNotificationEmailJob::dispatch($notification->id)->afterCommit();
 
             return $offer;
         });

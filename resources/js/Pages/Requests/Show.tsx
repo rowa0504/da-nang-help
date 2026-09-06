@@ -1,6 +1,10 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEvent } from 'react';
-import { JobData, OfferData, ServiceRequestData, SharedProps } from '@/types';
+import { JobData, OfferData, OfferStatus, ServiceRequestData, ServiceRequestStatus, ServiceRequestUrgency, SharedProps, SupportedLocale } from '@/types';
+import { AppLayout } from '@/Layouts/AppLayout';
+import { TranslatedText } from '@/Components/TranslatedText';
+import { useTranslation } from '@/hooks/useTranslation';
+import { TranslationKey } from '@/lang/en';
 
 interface Props {
     request: ServiceRequestData;
@@ -19,6 +23,34 @@ const fieldClass =
 const labelClass = 'block text-sm font-medium text-gray-700';
 const errorClass = 'mt-1 text-sm text-red-600';
 
+// Explicit, exhaustive correspondence tables — a missing case here is a
+// compile error, never a silent fallback to an untranslated raw value.
+const REQUEST_STATUS_KEYS: Record<ServiceRequestStatus, TranslationKey> = {
+    open: 'status.request.open',
+    assigned: 'status.request.assigned',
+    cancelled: 'status.request.cancelled',
+};
+const URGENCY_KEYS: Record<ServiceRequestUrgency, TranslationKey> = {
+    normal: 'status.urgency.normal',
+    urgent: 'status.urgency.urgent',
+};
+const OFFER_STATUS_KEYS: Record<OfferStatus, TranslationKey> = {
+    pending: 'status.offer.pending',
+    accepted: 'status.offer.accepted',
+    rejected: 'status.offer.rejected',
+    withdrawn: 'status.offer.withdrawn',
+    cancelled: 'status.offer.cancelled',
+};
+const SOURCE_LOCALE_OPTIONS: { value: SupportedLocale; labelKey: 'language.en' | 'language.ja' | 'language.vi' }[] = [
+    { value: 'en', labelKey: 'language.en' },
+    { value: 'ja', labelKey: 'language.ja' },
+    { value: 'vi', labelKey: 'language.vi' },
+];
+
+function isSupportedLocale(value: string): value is SupportedLocale {
+    return SOURCE_LOCALE_OPTIONS.some((option) => option.value === value);
+}
+
 // datetime-local inputs need "YYYY-MM-DDTHH:mm" in the browser's local time
 // (no timezone suffix); this converts a stored UTC ISO 8601 string back to
 // that format for pre-filling the edit form.
@@ -31,10 +63,11 @@ function toDatetimeLocalValue(iso?: string | null): string {
 
 export default function Show({ request, myOffer, canOffer, job }: Props) {
     const { auth, flash } = usePage<SharedProps>().props;
+    const { t } = useTranslation();
     const { patch, processing } = useForm();
 
     function cancel() {
-        if (confirm('Cancel this request? This cannot be undone.')) {
+        if (confirm(t('requests.show.confirm_cancel'))) {
             patch(`/requests/${request.id}/cancel`);
         }
     }
@@ -47,91 +80,97 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
     const canSeePrivate = request.address_text !== undefined;
 
     return (
-        <main className="mx-auto max-w-2xl p-6 font-sans">
-            <Head title={request.title} />
+        <AppLayout>
+            <div className="mx-auto max-w-2xl p-6 font-sans">
+                <Head title={request.title} />
 
-            {flash.warning && (
-                <p className="mb-4 rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-                    {flash.warning}
+                {flash.warning && (
+                    <p className="mb-4 rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+                        {flash.warning}
+                    </p>
+                )}
+
+                <h1 className="text-2xl font-semibold text-gray-900">
+                    <TranslatedText translation={request.title_translation} translated={request.title} />
+                </h1>
+                <p className="mt-1 text-sm text-gray-600">
+                    <strong className="font-medium text-gray-800">{t('common.status')}:</strong> {t(REQUEST_STATUS_KEYS[request.status])} ·{' '}
+                    <strong className="font-medium text-gray-800">{t('common.urgency')}:</strong> {t(URGENCY_KEYS[request.urgency])}
                 </p>
-            )}
+                <p className="mt-3 text-gray-800">
+                    <TranslatedText translation={request.description_translation} translated={request.description} />
+                </p>
+                <p className="mt-1 text-sm text-gray-600">
+                    <strong className="font-medium text-gray-800">{t('common.category')}:</strong> {request.category.name} ·{' '}
+                    <strong className="font-medium text-gray-800">{t('common.area')}:</strong> {request.area.name}
+                </p>
 
-            <h1 className="text-2xl font-semibold text-gray-900">{request.title}</h1>
-            <p className="mt-1 text-sm text-gray-600">
-                <strong className="font-medium text-gray-800">Status:</strong> {request.status} ·{' '}
-                <strong className="font-medium text-gray-800">Urgency:</strong> {request.urgency}
-            </p>
-            <p className="mt-3 text-gray-800">{request.description}</p>
-            <p className="mt-1 text-sm text-gray-600">
-                <strong className="font-medium text-gray-800">Category:</strong> {request.category.name} ·{' '}
-                <strong className="font-medium text-gray-800">Area:</strong> {request.area.name}
-            </p>
+                {request.photos.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {request.photos.map((photo) => (
+                            <img
+                                key={photo.id}
+                                src={photo.url}
+                                alt=""
+                                className="h-40 w-40 rounded border border-gray-200 object-cover"
+                            />
+                        ))}
+                    </div>
+                )}
 
-            {request.photos.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                    {request.photos.map((photo) => (
-                        <img
-                            key={photo.id}
-                            src={photo.url}
-                            alt=""
-                            className="h-40 w-40 rounded border border-gray-200 object-cover"
-                        />
-                    ))}
-                </div>
-            )}
+                {canSeePrivate && (
+                    <dl className="mt-4 space-y-1 rounded border border-gray-200 p-4 text-sm">
+                        <dt className="font-medium text-gray-700">{t('common.address')}</dt>
+                        <dd className="text-gray-800">{request.address_text}</dd>
+                        <dt className="font-medium text-gray-700">{t('requests.show.coordinates')}</dt>
+                        <dd className="text-gray-800">
+                            {request.lat}, {request.lng}
+                        </dd>
+                        {request.customer && (
+                            <>
+                                <dt className="font-medium text-gray-700">{t('common.customer')}</dt>
+                                <dd className="text-gray-800">
+                                    {request.customer.name} ({request.customer.email}
+                                    {request.customer.phone ? `, ${request.customer.phone}` : ''})
+                                </dd>
+                            </>
+                        )}
+                    </dl>
+                )}
 
-            {canSeePrivate && (
-                <dl className="mt-4 space-y-1 rounded border border-gray-200 p-4 text-sm">
-                    <dt className="font-medium text-gray-700">Address</dt>
-                    <dd className="text-gray-800">{request.address_text}</dd>
-                    <dt className="font-medium text-gray-700">Coordinates</dt>
-                    <dd className="text-gray-800">
-                        {request.lat}, {request.lng}
-                    </dd>
-                    {request.customer && (
-                        <>
-                            <dt className="font-medium text-gray-700">Customer</dt>
-                            <dd className="text-gray-800">
-                                {request.customer.name} ({request.customer.email}
-                                {request.customer.phone ? `, ${request.customer.phone}` : ''})
-                            </dd>
-                        </>
-                    )}
-                </dl>
-            )}
+                {auth.user?.role === 'customer' && request.status === 'open' && (
+                    <button onClick={cancel} disabled={processing} className={`${dangerButtonClass} mt-4`}>
+                        {t('requests.show.cancel')}
+                    </button>
+                )}
 
-            {auth.user?.role === 'customer' && request.status === 'open' && (
-                <button onClick={cancel} disabled={processing} className={`${dangerButtonClass} mt-4`}>
-                    Cancel request
-                </button>
-            )}
+                {auth.user?.role === 'customer' && (
+                    <p className="mt-4">
+                        <Link href={`/requests/${request.id}/offers`} className={linkClass}>
+                            {t('nav.view_offers')}
+                        </Link>
+                    </p>
+                )}
 
-            {auth.user?.role === 'customer' && (
+                {auth.user?.role === 'provider' && (canOffer || myOffer) && (
+                    <OfferSection requestId={request.id} myOffer={myOffer} canOffer={canOffer} />
+                )}
+
+                {job && (
+                    <p className="mt-4">
+                        <Link href={`/jobs/${job.id}`} className={linkClass}>
+                            {t('nav.view_job')}
+                        </Link>
+                    </p>
+                )}
+
                 <p className="mt-4">
-                    <Link href={`/requests/${request.id}/offers`} className={linkClass}>
-                        View offers
+                    <Link href="/requests" className={linkClass}>
+                        {t('nav.back_to_my_requests')}
                     </Link>
                 </p>
-            )}
-
-            {auth.user?.role === 'provider' && (canOffer || myOffer) && (
-                <OfferSection requestId={request.id} myOffer={myOffer} canOffer={canOffer} />
-            )}
-
-            {job && (
-                <p className="mt-4">
-                    <Link href={`/jobs/${job.id}`} className={linkClass}>
-                        View job
-                    </Link>
-                </p>
-            )}
-
-            <p className="mt-4">
-                <Link href="/requests" className={linkClass}>
-                    Back to my requests
-                </Link>
-            </p>
-        </main>
+            </div>
+        </AppLayout>
     );
 }
 
@@ -140,17 +179,19 @@ type OfferForm = {
     currency: string;
     message: string;
     available_at: string;
-    source_locale: 'en' | 'ja' | 'vi';
+    source_locale: SupportedLocale;
 };
 
 function OfferSection({ requestId, myOffer, canOffer }: { requestId: number; myOffer: OfferData | null; canOffer: boolean }) {
+    const { t } = useTranslation();
+
     if (myOffer && myOffer.status !== 'pending') {
         return (
             <div className="mt-6 rounded border border-gray-200 p-4">
-                <h2 className="text-lg font-semibold text-gray-900">Your offer</h2>
-                <p className="mt-1 text-sm text-gray-600">Status: {myOffer.status}</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('requests.show.your_offer')}</h2>
+                <p className="mt-1 text-sm text-gray-600">{t('common.status_label', { status: t(OFFER_STATUS_KEYS[myOffer.status]) })}</p>
                 <p className="mt-2 text-gray-800">
-                    {myOffer.currency} {myOffer.price} — {myOffer.message}
+                    {myOffer.currency} {myOffer.price} — <TranslatedText translation={myOffer.message_translation} translated={myOffer.message} />
                 </p>
             </div>
         );
@@ -169,15 +210,16 @@ function OfferSection({ requestId, myOffer, canOffer }: { requestId: number; myO
 
 function OfferForm({ requestId, existingOffer }: { requestId: number; existingOffer: OfferData | null }) {
     const { auth } = usePage<SharedProps>().props;
-    const defaultLocale: 'en' | 'ja' | 'vi' =
-        auth.user?.locale === 'ja' || auth.user?.locale === 'vi' ? auth.user.locale : 'en';
+    const { t } = useTranslation();
+    const rawLocale = auth.user?.locale;
+    const defaultLocale: SupportedLocale = rawLocale !== undefined && isSupportedLocale(rawLocale) ? rawLocale : 'en';
 
     const { data, setData, post, patch, transform, processing, errors } = useForm<OfferForm>({
         price: existingOffer?.price ?? '',
         currency: existingOffer?.currency ?? 'USD',
         message: existingOffer?.original_message ?? '',
         available_at: toDatetimeLocalValue(existingOffer?.available_at),
-        source_locale: (existingOffer?.source_locale as 'en' | 'ja' | 'vi' | undefined) ?? defaultLocale,
+        source_locale: existingOffer?.source_locale && isSupportedLocale(existingOffer.source_locale) ? existingOffer.source_locale : defaultLocale,
     });
 
     function submit(e: FormEvent) {
@@ -199,18 +241,20 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
     }
 
     function withdraw() {
-        if (existingOffer && confirm('Withdraw this offer?')) {
+        if (existingOffer && confirm(t('requests.show.confirm_withdraw'))) {
             patch(`/offers/${existingOffer.id}/withdraw`);
         }
     }
 
     return (
         <div className="mt-6 rounded border border-gray-200 p-4">
-            <h2 className="text-lg font-semibold text-gray-900">{existingOffer ? 'Edit your offer' : 'Send an offer'}</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+                {existingOffer ? t('requests.show.edit_offer_heading') : t('requests.show.send_offer_heading')}
+            </h2>
             <form onSubmit={submit} className="mt-3 flex flex-col gap-4">
                 <div>
                     <label className={labelClass}>
-                        Price
+                        {t('common.price')}
                         <input
                             type="number"
                             min="0"
@@ -226,7 +270,7 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
 
                 <div>
                     <label className={labelClass}>
-                        Currency
+                        {t('common.currency')}
                         <input
                             type="text"
                             maxLength={3}
@@ -240,7 +284,7 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
 
                 <div>
                     <label className={labelClass}>
-                        Message
+                        {t('common.message')}
                         <textarea
                             className={`${fieldClass} min-h-32`}
                             value={data.message}
@@ -252,7 +296,7 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
 
                 <div>
                     <label className={labelClass}>
-                        Available from (optional)
+                        {t('requests.show.available_from_optional')}
                         <input
                             type="datetime-local"
                             className={fieldClass}
@@ -265,15 +309,21 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
 
                 <div>
                     <label className={labelClass}>
-                        Language of this message
+                        {t('requests.show.offer_language_label')}
                         <select
                             className={fieldClass}
                             value={data.source_locale}
-                            onChange={(e) => setData('source_locale', e.target.value as 'en' | 'ja' | 'vi')}
+                            onChange={(e) => {
+                                if (isSupportedLocale(e.target.value)) {
+                                    setData('source_locale', e.target.value);
+                                }
+                            }}
                         >
-                            <option value="en">English</option>
-                            <option value="ja">Japanese</option>
-                            <option value="vi">Vietnamese</option>
+                            {SOURCE_LOCALE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {t(option.labelKey)}
+                                </option>
+                            ))}
                         </select>
                     </label>
                     {errors.source_locale && <div className={errorClass}>{errors.source_locale}</div>}
@@ -281,7 +331,7 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
 
                 <div className="flex gap-2">
                     <button type="submit" disabled={processing} className={`${primaryButtonClass} self-start`}>
-                        {existingOffer ? 'Save changes' : 'Send offer'}
+                        {existingOffer ? t('common.save_changes') : t('common.send_offer')}
                     </button>
                     {existingOffer && (
                         <button
@@ -290,7 +340,7 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
                             disabled={processing}
                             className={`${dangerButtonClass} self-start`}
                         >
-                            Withdraw
+                            {t('common.withdraw')}
                         </button>
                     )}
                 </div>

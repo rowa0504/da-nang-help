@@ -6,9 +6,12 @@ use App\Actions\Admin\ApproveProviderAction;
 use App\Actions\Admin\RejectProviderAction;
 use App\Enums\ProviderVerificationStatus;
 use App\Exceptions\InvalidProviderVerificationTransitionException;
+use App\Models\Category;
+use App\Models\CategoryTranslation;
 use App\Models\ProviderProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -131,5 +134,65 @@ class ProviderReviewTest extends TestCase
         $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertInertia(
             fn (Assert $page) => $page->where('profile.verification_note', 'Visible to admin only')
         );
+    }
+
+    public function test_provider_detail_category_names_resolve_to_the_viewers_locale(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $category = Category::factory()->create(['slug' => 'aircon-repair']);
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Air-con Repair']);
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'ja', 'name' => 'エアコン修理']);
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'vi', 'name' => 'Sửa điều hòa']);
+        $profile = ProviderProfile::factory()->create();
+        $profile->categories()->attach($category);
+
+        $expected = ['en' => 'Air-con Repair', 'ja' => 'エアコン修理', 'vi' => 'Sửa điều hòa'];
+        foreach ($expected as $locale => $name) {
+            $admin->locale = $locale;
+            $admin->save();
+
+            $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertInertia(
+                fn (Assert $page) => $page->where('profile.categories', [$name])
+            );
+        }
+    }
+
+    public function test_provider_detail_categories_do_not_trigger_n_plus_one_from_translations(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $profile = ProviderProfile::factory()->create();
+        $threeCategories = Category::factory()->count(3)->create();
+        foreach ($threeCategories as $category) {
+            CategoryTranslation::factory()->for($category)->create(['locale' => 'en']);
+        }
+        $profile->categories()->attach($threeCategories);
+
+        // Warm up first: the very first DB interaction in a test can carry
+        // one-off overhead unrelated to the N+1 behavior under test (same
+        // approach as the other N+1 regression tests in this codebase).
+        $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertOk();
+
+        DB::enableQueryLog();
+        $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertOk();
+        $queryCountForThree = count(DB::getQueryLog());
+        DB::flushQueryLog();
+
+        $nineMoreCategories = Category::factory()->count(9)->create();
+        foreach ($nineMoreCategories as $category) {
+            CategoryTranslation::factory()->for($category)->create(['locale' => 'en']);
+        }
+        $profile->categories()->attach($nineMoreCategories);
+        DB::flushQueryLog();
+
+        $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertOk();
+        $queryCountForTwelve = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // Query count must not scale with the number of categories the
+        // profile handles — if `translations` were lazy-loaded per
+        // category (instead of eager loaded before nameFor() resolves each
+        // name), quadrupling the category count would proportionally
+        // increase the query count.
+        $this->assertSame($queryCountForThree, $queryCountForTwelve);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\TranslationStatus;
 use App\Enums\UserRole;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -29,14 +30,28 @@ class ServiceRequestResource extends JsonResource
                 || $viewer->role === UserRole::Admin
                 || $viewer->id === $assignedProviderId);
         $viewerLocale = $viewer->locale ?? 'en';
+        // title/description share one translation row per locale, so
+        // "is this the machine-translated version" is the same for both.
+        $isTranslated = $viewerLocale !== $this->source_locale
+            && $this->translations->firstWhere('locale', $viewerLocale)?->translation_status === TranslationStatus::Completed;
 
         return [
             'id' => $this->id,
             'title' => $this->translatedTitleFor($viewerLocale),
             'description' => $this->translatedDescriptionFor($viewerLocale),
+            'title_translation' => [
+                'is_translated' => $isTranslated,
+                'source_locale' => $this->source_locale,
+                'original' => $this->title,
+            ],
+            'description_translation' => [
+                'is_translated' => $isTranslated,
+                'source_locale' => $this->source_locale,
+                'original' => $this->description,
+            ],
             'category' => [
                 'id' => $this->category_id,
-                'name' => $this->category->translations->first()?->name ?? $this->category->slug,
+                'name' => $this->category->nameFor(app()->getLocale()),
             ],
             'area' => [
                 'id' => $this->area_id,

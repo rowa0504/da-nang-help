@@ -1,30 +1,35 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { SharedProps } from '@/types';
+import { AppLayout } from '@/Layouts/AppLayout';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function Home() {
     const { auth } = usePage<SharedProps>().props;
+    const { t } = useTranslation();
 
     return (
-        <main style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
-            <Head title="Da Nang Help" />
-            <h1>Da Nang Help</h1>
-            <p>Phase 1 environment OK — Laravel + Inertia.js + React + TypeScript</p>
+        <AppLayout>
+            <div style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
+                <Head title={t('app.name')} />
+                <h1>{t('app.name')}</h1>
+                <p>{t('home.tagline')}</p>
 
-            <nav style={{ display: 'flex', gap: '1rem' }}>
-                {auth.user ? (
-                    <>
-                        <Link href="/dashboard">Dashboard</Link>
-                        <Link href="/logout" method="post" as="button">
-                            Log out
-                        </Link>
-                    </>
-                ) : (
-                    <>
-                        <Link href="/login">Log in</Link>
-                        <Link href="/register">Register</Link>
-                    </>
-                )}
-            </nav>
-        </main>
+                <nav style={{ display: 'flex', gap: '1rem' }}>
+                    {auth.user ? (
+                        <>
+                            <Link href="/dashboard">{t('nav.dashboard')}</Link>
+                            <Link href="/logout" method="post" as="button">
+                                {t('nav.logout')}
+                            </Link>
+                        </>
+                    ) : (
+                        <>
+                            <Link href="/login">{t('nav.login')}</Link>
+                            <Link href="/register">{t('nav.register')}</Link>
+                        </>
+                    )}
+                </nav>
+            </div>
+        </AppLayout>
     );
 }

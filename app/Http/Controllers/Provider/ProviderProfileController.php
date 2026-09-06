@@ -32,16 +32,14 @@ class ProviderProfileController extends Controller
                 'avg_rating' => $profile->avg_rating,
                 'completed_jobs_count' => $profile->completed_jobs_count,
             ] : null,
-            // Phase 3: category display name is fixed to the `en` translation.
-            // Locale-aware switching + fallback is Phase 8's job.
             'categories' => Category::query()
                 ->activeOrdered()
-                ->with(['translations' => fn ($query) => $query->where('locale', 'en')])
+                ->with('translations')
                 ->get()
                 ->map(fn (Category $category) => [
                     'id' => $category->id,
                     'slug' => $category->slug,
-                    'name' => $category->translations->first()?->name ?? $category->slug,
+                    'name' => $category->nameFor(app()->getLocale()),
                 ]),
             'areas' => Area::query()
                 ->active()

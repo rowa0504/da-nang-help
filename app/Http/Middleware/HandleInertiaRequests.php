@@ -60,6 +60,12 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'warning' => fn () => $request->session()->get('warning'),
             ],
+            // The effective UI locale for this request (set by SetLocale),
+            // distinct from auth.user.locale which is the user's saved
+            // preference — the two are normally equal, but this is the one
+            // the frontend dictionary actually keys off of, and it also
+            // works for guests who have no `locale` column at all.
+            'locale' => app()->getLocale(),
         ];
     }
 }

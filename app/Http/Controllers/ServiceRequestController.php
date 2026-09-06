@@ -30,7 +30,7 @@ class ServiceRequestController extends Controller
             ->where('customer_id', $request->user()->id)
             ->with([
                 'customer',
-                'category.translations' => fn ($query) => $query->where('locale', 'en'),
+                'category.translations',
                 'area',
                 'photos',
                 'translations',
@@ -55,12 +55,12 @@ class ServiceRequestController extends Controller
         return Inertia::render('Requests/Create', [
             'categories' => Category::query()
                 ->activeOrdered()
-                ->with(['translations' => fn ($query) => $query->where('locale', 'en')])
+                ->with('translations')
                 ->get()
                 ->map(fn (Category $category) => [
                     'id' => $category->id,
                     'slug' => $category->slug,
-                    'name' => $category->translations->first()?->name ?? $category->slug,
+                    'name' => $category->nameFor(app()->getLocale()),
                 ]),
             'areas' => Area::query()->active()->orderBy('name')->get(['id', 'name', 'slug']),
         ]);
@@ -90,7 +90,7 @@ class ServiceRequestController extends Controller
 
         $serviceRequest->load([
             'customer',
-            'category.translations' => fn ($query) => $query->where('locale', 'en'),
+            'category.translations',
             'area',
             'photos',
             'translations',

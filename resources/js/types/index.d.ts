@@ -2,6 +2,17 @@ export type UserRole = 'customer' | 'provider' | 'admin';
 
 export type ProviderVerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
+// Keep in sync with SetLocale::SUPPORTED (app/Http/Middleware/SetLocale.php).
+export type SupportedLocale = 'en' | 'ja' | 'vi';
+
+// Matches the {is_translated, source_locale, original} shape added to
+// ServiceRequestResource/OfferResource in Phase 8.
+export interface TranslationMeta {
+    is_translated: boolean;
+    source_locale: string;
+    original: string;
+}
+
 export interface AuthUser {
     id: number;
     name: string;
@@ -19,6 +30,7 @@ export interface SharedProps {
     flash: {
         warning: string | null;
     };
+    locale: SupportedLocale;
     [key: string]: unknown;
 }
 
@@ -56,6 +68,8 @@ export interface ServiceRequestData {
     id: number;
     title: string;
     description: string;
+    title_translation: TranslationMeta;
+    description_translation: TranslationMeta;
     category: { id: number; name: string };
     area: { id: number; name: string };
     urgency: ServiceRequestUrgency;
@@ -103,6 +117,7 @@ export interface OfferData {
     price: string; // decimal cast string, kept as-is — never converted to number
     currency: string;
     message: string;
+    message_translation: TranslationMeta;
     available_at: string | null; // UTC ISO 8601
     status: OfferStatus;
     created_at: string;

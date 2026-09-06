@@ -40,7 +40,10 @@ class ProviderReviewController extends Controller
     {
         $this->authorize('view', $providerProfile);
 
-        $providerProfile->load(['user:id,name,email,phone', 'categories', 'areas']);
+        // 'categories.translations' (unfiltered by locale) so nameFor()
+        // below can resolve every category's name without an extra query
+        // per category — same pattern as ServiceRequestController etc.
+        $providerProfile->load(['user:id,name,email,phone', 'categories.translations', 'areas']);
 
         return Inertia::render('Admin/Providers/Show', [
             'profile' => [
@@ -52,7 +55,7 @@ class ProviderReviewController extends Controller
                 // the model, so it must be added to this array by hand.
                 // Only this Admin-facing response includes it.
                 'verification_note' => $providerProfile->verification_note,
-                'categories' => $providerProfile->categories->pluck('slug'),
+                'categories' => $providerProfile->categories->map(fn ($category) => $category->nameFor(app()->getLocale())),
                 'areas' => $providerProfile->areas->pluck('name'),
                 'applicant_name' => $providerProfile->user->name,
                 'applicant_email' => $providerProfile->user->email,

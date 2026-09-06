@@ -565,6 +565,54 @@ class OfferTest extends TestCase
         );
     }
 
+    public function test_offer_message_translation_metadata_reflects_the_original_when_the_viewer_shares_the_source_locale(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $serviceRequest->customer->locale = 'en';
+        $serviceRequest->customer->save();
+        $provider = $this->approvedProviderFor($category, $area);
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create([
+            'message' => 'I can help with this.',
+            'source_locale' => 'en',
+        ]);
+
+        $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('offers.data.0.message_translation.is_translated', false)
+                ->where('offers.data.0.message_translation.source_locale', 'en')
+                ->where('offers.data.0.message_translation.original', 'I can help with this.')
+        );
+    }
+
+    public function test_offer_message_translation_metadata_marks_a_completed_translation_as_translated(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $customer = User::factory()->create();
+        $customer->locale = 'ja';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $offer = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create([
+            'message' => 'I can help with this.',
+            'source_locale' => 'en',
+        ]);
+        OfferTranslation::factory()->completed()->create([
+            'offer_id' => $offer->id,
+            'locale' => 'ja',
+            'message' => 'お手伝いできます。',
+        ]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('offers.data.0.message', 'お手伝いできます。')
+                ->where('offers.data.0.message_translation.is_translated', true)
+                ->where('offers.data.0.message_translation.original', 'I can help with this.')
+        );
+    }
+
     public function test_hidden_request_is_forbidden_even_for_existing_offer_holder(): void
     {
         $category = Category::factory()->create();
