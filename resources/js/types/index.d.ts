@@ -52,6 +52,11 @@ export interface ProviderProfileData {
     verification_status: ProviderVerificationStatus;
     category_ids: number[];
     area_ids: number[];
+    // Resolved directly from this profile's own attached categories/areas
+    // (not from the active-only picker list), so they stay correct even if
+    // an Admin later deactivates one (Phase 9).
+    category_names: string[];
+    area_names: string[];
     avg_rating: string; // decimal cast string, kept as-is — never converted to number
     completed_jobs_count: number;
 }
@@ -168,4 +173,61 @@ export interface AdminReviewData {
     comment: string | null;
     is_hidden: boolean;
     created_at: string;
+}
+
+export type ServiceRequestModerationStatus = 'visible' | 'hidden';
+
+export interface AdminServiceRequestData {
+    id: number;
+    title: string;
+    customer_name: string;
+    category_name: string;
+    area_name: string;
+    status: ServiceRequestStatus;
+    moderation_status: ServiceRequestModerationStatus;
+    created_at: string;
+}
+
+export interface AdminCategoryData {
+    id: number;
+    slug: string;
+    name: string;
+    is_active: boolean;
+    sort_order: number;
+    parent_id: number | null;
+    depth: number;
+}
+
+export interface CategoryOptionWithDepth {
+    id: number;
+    name: string;
+    depth: number;
+}
+
+export interface AdminCategoryDetail {
+    id: number;
+    slug: string;
+    parent_id: number | null;
+    is_active: boolean;
+    sort_order: number;
+    names: { en: string; ja: string; vi: string };
+}
+
+export interface AdminAreaData {
+    id: number;
+    slug: string;
+    name: string;
+    is_active: boolean;
+}
+
+export interface AdminStats {
+    total_requests: number;
+    open_requests: number;
+    conversion_rate: number;
+    total_jobs: number;
+    completed_jobs: number;
+    pending_providers: number;
+    active_categories: number;
+    active_areas: number;
+    hidden_reviews: number;
 }

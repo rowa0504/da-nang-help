@@ -4,11 +4,14 @@ namespace Tests\Feature\Admin;
 
 use App\Actions\Admin\ApproveProviderAction;
 use App\Actions\Admin\RejectProviderAction;
+use App\Actions\Admin\SuspendProviderAction;
 use App\Enums\ProviderVerificationStatus;
+use App\Enums\ServiceJobStatus;
 use App\Exceptions\InvalidProviderVerificationTransitionException;
 use App\Models\Category;
 use App\Models\CategoryTranslation;
 use App\Models\ProviderProfile;
+use App\Models\ServiceJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -194,5 +197,78 @@ class ProviderReviewTest extends TestCase
         // name), quadrupling the category count would proportionally
         // increase the query count.
         $this->assertSame($queryCountForThree, $queryCountForTwelve);
+    }
+
+    public function test_admin_can_suspend_an_approved_profile(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $profile = ProviderProfile::factory()->approved()->create();
+
+        $response = $this->actingAs($admin)->patch("/admin/providers/{$profile->id}/suspend", ['note' => 'Repeated complaints from customers.']);
+
+        $response->assertRedirect(route('admin.providers.index'));
+        $fresh = $profile->fresh();
+        $this->assertSame(ProviderVerificationStatus::Suspended, $fresh->verification_status);
+        $this->assertNotNull($fresh->suspended_at);
+        $this->assertSame('Repeated complaints from customers.', $fresh->verification_note);
+    }
+
+    public function test_suspend_requires_a_note(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $profile = ProviderProfile::factory()->approved()->create();
+
+        $this->actingAs($admin)->patch("/admin/providers/{$profile->id}/suspend", ['note' => ''])->assertInvalid(['note']);
+        $this->assertSame(ProviderVerificationStatus::Approved, $profile->fresh()->verification_status);
+    }
+
+    public function test_only_an_approved_profile_can_be_suspended(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        foreach ([ProviderProfile::factory()->create(), ProviderProfile::factory()->rejected()->create()] as $profile) {
+            $this->actingAs($admin)->patch("/admin/providers/{$profile->id}/suspend", ['note' => 'x'])->assertForbidden();
+        }
+    }
+
+    public function test_customer_and_provider_cannot_suspend(): void
+    {
+        $customer = User::factory()->create();
+        $provider = User::factory()->provider()->create();
+        $profile = ProviderProfile::factory()->approved()->create();
+
+        foreach ([$customer, $provider] as $user) {
+            $this->actingAs($user)->patch("/admin/providers/{$profile->id}/suspend", ['note' => 'x'])->assertForbidden();
+        }
+    }
+
+    public function test_suspend_action_reverifies_status_after_lock_even_if_called_twice(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $profile = ProviderProfile::factory()->approved()->create();
+
+        app(SuspendProviderAction::class)->handle($admin, $profile, 'first suspension');
+
+        $this->expectException(InvalidProviderVerificationTransitionException::class);
+        app(SuspendProviderAction::class)->handle($admin, $profile->fresh(), 'second suspension');
+    }
+
+    public function test_suspending_a_provider_does_not_affect_their_existing_in_progress_job(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $job = ServiceJob::factory()->inProgress()->create();
+        ProviderProfile::factory()->forUser($job->provider)->approved()->create();
+
+        app(SuspendProviderAction::class)->handle($admin, $job->provider->providerProfile, 'suspended mid-job');
+
+        // The provider's existing in_progress Job must remain fully
+        // operable — JobPolicy never reads verification_status, only
+        // *new* Offer/Feed access is blocked by suspension.
+        $this->actingAs($job->provider)->get("/jobs/{$job->id}")->assertOk();
+        $this->actingAs($job->provider)->patch("/jobs/{$job->id}/report-completion")->assertRedirect();
+        $this->assertSame(ServiceJobStatus::AwaitingConfirmation, $job->fresh()->status);
+
+        $this->actingAs($job->customer)->patch("/jobs/{$job->id}/confirm-completion")->assertRedirect();
+        $this->assertSame(ServiceJobStatus::Completed, $job->fresh()->status);
     }
 }

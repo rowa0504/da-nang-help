@@ -7,6 +7,7 @@ use App\Enums\ProviderVerificationStatus;
 use App\Exceptions\InvalidProviderVerificationTransitionException;
 use App\Models\Area;
 use App\Models\Category;
+use App\Models\CategoryTranslation;
 use App\Models\ProviderProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -198,6 +199,49 @@ class ProviderProfileTest extends TestCase
 
         $this->actingAs($provider)->get('/provider/profile')->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Provider/Profile')->where('profile', null)
+        );
+    }
+
+    public function test_deactivated_category_and_area_disappear_from_the_picker_list(): void
+    {
+        $provider = User::factory()->provider()->create();
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+
+        $category->is_active = false;
+        $category->save();
+        $area->is_active = false;
+        $area->save();
+
+        $this->actingAs($provider)->get('/provider/profile')->assertInertia(
+            fn (Assert $page) => $page
+                ->where('categories', fn ($categories) => ! collect($categories)->pluck('id')->contains($category->id))
+                ->where('areas', fn ($areas) => ! collect($areas)->pluck('id')->contains($area->id))
+        );
+    }
+
+    public function test_an_already_approved_categorys_deactivation_does_not_break_the_read_only_summary(): void
+    {
+        $provider = User::factory()->provider()->create();
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Plumbing']);
+        $profile = ProviderProfile::factory()->forUser($provider)->approved()->create();
+        $profile->categories()->attach($category);
+        $profile->areas()->attach($area);
+
+        $category->is_active = false;
+        $category->save();
+        $area->is_active = false;
+        $area->save();
+
+        // The provider's own already-approved category/area must still
+        // resolve correctly on the read-only summary even though it no
+        // longer appears in the (active-only) picker list above.
+        $this->actingAs($provider)->get('/provider/profile')->assertInertia(
+            fn (Assert $page) => $page
+                ->where('profile.category_names', ['Plumbing'])
+                ->where('profile.area_names', [$area->name])
         );
     }
 }

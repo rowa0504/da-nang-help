@@ -35,6 +35,7 @@ export default function Show({ profile }: Props) {
     const { t } = useTranslation();
     const approveForm = useForm({});
     const rejectForm = useForm({ note: '' });
+    const suspendForm = useForm({ note: '' });
 
     function approve(e: FormEvent) {
         e.preventDefault();
@@ -46,7 +47,13 @@ export default function Show({ profile }: Props) {
         rejectForm.patch(`/admin/providers/${profile.id}/reject`);
     }
 
+    function suspend(e: FormEvent) {
+        e.preventDefault();
+        suspendForm.patch(`/admin/providers/${profile.id}/suspend`);
+    }
+
     const canDecide = profile.verification_status === 'pending';
+    const canSuspend = profile.verification_status === 'approved';
 
     return (
         <AppLayout>
@@ -97,6 +104,22 @@ export default function Show({ profile }: Props) {
                             </button>
                         </form>
                     </>
+                )}
+
+                {canSuspend && (
+                    <form onSubmit={suspend} style={{ marginTop: '1rem' }}>
+                        <label>
+                            {t('admin.providers.show.suspension_reason')}
+                            <textarea
+                                value={suspendForm.data.note}
+                                onChange={(e) => suspendForm.setData('note', e.target.value)}
+                            />
+                        </label>
+                        {suspendForm.errors.note && <div style={{ color: 'crimson' }}>{suspendForm.errors.note}</div>}
+                        <button type="submit" disabled={suspendForm.processing}>
+                            {t('admin.providers.show.suspend')}
+                        </button>
+                    </form>
                 )}
 
                 <p>

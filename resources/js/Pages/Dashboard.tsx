@@ -1,8 +1,14 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ProviderVerificationStatus, SharedProps } from '@/types';
+import { AdminStats, ProviderVerificationStatus, SharedProps } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { useTranslation } from '@/hooks/useTranslation';
 import { TranslationKey } from '@/lang/en';
+
+interface Props {
+    // Only present for Admin viewers (DashboardController computes it
+    // conditionally) — everyone else gets no adminStats prop at all.
+    adminStats?: AdminStats;
+}
 
 // Explicit, exhaustive correspondence table — a missing case here is a
 // compile error, never a silent fallback to an untranslated raw value.
@@ -18,7 +24,7 @@ const ROLE_KEYS: Record<'customer' | 'provider' | 'admin', TranslationKey> = {
 // When real Provider/Admin-only features are added (Phase 3+), enforce
 // access on the server via Laravel Middleware/Policies, and only use this
 // switch to choose which already-authorized UI to render.
-export default function Dashboard() {
+export default function Dashboard({ adminStats }: Props) {
     const { auth } = usePage<SharedProps>().props;
     const { t } = useTranslation();
     const user = auth.user;
@@ -59,10 +65,37 @@ export default function Dashboard() {
                 )}
 
                 {user.role === 'admin' && (
-                    <p>
-                        {t('dashboard.admin_placeholder')} <Link href="/admin/providers">{t('nav.review_pending_providers')}</Link> ·{' '}
-                        <Link href="/admin/reviews">{t('nav.manage_reviews')}</Link>
-                    </p>
+                    <>
+                        {adminStats && (
+                            <dl style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.25rem 1rem', maxWidth: 320 }}>
+                                <dt>{t('admin.dashboard.stats.total_requests')}</dt>
+                                <dd>{adminStats.total_requests}</dd>
+                                <dt>{t('admin.dashboard.stats.open_requests')}</dt>
+                                <dd>{adminStats.open_requests}</dd>
+                                <dt>{t('admin.dashboard.stats.conversion_rate')}</dt>
+                                <dd>{adminStats.conversion_rate}%</dd>
+                                <dt>{t('admin.dashboard.stats.total_jobs')}</dt>
+                                <dd>{adminStats.total_jobs}</dd>
+                                <dt>{t('admin.dashboard.stats.completed_jobs')}</dt>
+                                <dd>{adminStats.completed_jobs}</dd>
+                                <dt>{t('admin.dashboard.stats.pending_providers')}</dt>
+                                <dd>{adminStats.pending_providers}</dd>
+                                <dt>{t('admin.dashboard.stats.active_categories')}</dt>
+                                <dd>{adminStats.active_categories}</dd>
+                                <dt>{t('admin.dashboard.stats.active_areas')}</dt>
+                                <dd>{adminStats.active_areas}</dd>
+                                <dt>{t('admin.dashboard.stats.hidden_reviews')}</dt>
+                                <dd>{adminStats.hidden_reviews}</dd>
+                            </dl>
+                        )}
+                        <p>
+                            <Link href="/admin/providers">{t('nav.review_pending_providers')}</Link> ·{' '}
+                            <Link href="/admin/reviews">{t('nav.manage_reviews')}</Link> ·{' '}
+                            <Link href="/admin/requests">{t('nav.manage_requests')}</Link> ·{' '}
+                            <Link href="/admin/categories">{t('nav.manage_categories')}</Link> ·{' '}
+                            <Link href="/admin/areas">{t('nav.manage_areas')}</Link>
+                        </p>
+                    </>
                 )}
 
                 <Link href="/logout" method="post" as="button">

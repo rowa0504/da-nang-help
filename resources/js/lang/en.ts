@@ -209,6 +209,57 @@ const en = {
     'admin.reviews.index.about': 'About',
     'admin.reviews.index.rating_out_of_5': '{rating} / 5',
     'admin.reviews.index.confirm_hide': 'Hide this review from {rater} about {ratee}?',
+
+    'common.edit': 'Edit',
+    'common.active': 'Active',
+    'common.inactive': 'Inactive',
+    'common.slug': 'Slug',
+    'common.sort_order': 'Sort order',
+    'common.name': 'Name',
+    'common.created_at': 'Created',
+
+    'nav.manage_requests': 'Manage requests',
+    'nav.manage_categories': 'Manage categories',
+    'nav.manage_areas': 'Manage areas',
+    'nav.back_to_categories': 'Back to categories',
+    'nav.back_to_areas': 'Back to areas',
+
+    'admin.dashboard.stats.total_requests': 'Total requests',
+    'admin.dashboard.stats.open_requests': 'Open requests',
+    'admin.dashboard.stats.conversion_rate': 'Conversion rate',
+    'admin.dashboard.stats.total_jobs': 'Total jobs',
+    'admin.dashboard.stats.completed_jobs': 'Completed jobs',
+    'admin.dashboard.stats.pending_providers': 'Pending providers',
+    'admin.dashboard.stats.active_categories': 'Active categories',
+    'admin.dashboard.stats.active_areas': 'Active areas',
+    'admin.dashboard.stats.hidden_reviews': 'Hidden reviews',
+
+    'admin.requests.index.title': 'Requests',
+    'admin.requests.index.empty': 'No requests yet.',
+    'admin.requests.index.visibility': 'Visibility',
+    'admin.requests.index.confirm_hide': 'Hide the request "{title}"?',
+
+    'admin.categories.index.title': 'Categories',
+    'admin.categories.index.empty': 'No categories yet.',
+    'admin.categories.index.create': 'Add category',
+    'admin.categories.create.title': 'Add Category',
+    'admin.categories.edit.title': 'Edit Category',
+    'admin.categories.form.parent': 'Parent category',
+    'admin.categories.form.parent_none': 'None (top-level)',
+    'admin.categories.form.name_en': 'Name (English)',
+    'admin.categories.form.name_ja': 'Name (Japanese)',
+    'admin.categories.form.name_vi': 'Name (Vietnamese)',
+    'admin.categories.form.submit_create': 'Create category',
+
+    'admin.areas.index.title': 'Areas',
+    'admin.areas.index.empty': 'No areas yet.',
+    'admin.areas.index.create': 'Add area',
+    'admin.areas.create.title': 'Add Area',
+    'admin.areas.edit.title': 'Edit Area',
+    'admin.areas.form.submit_create': 'Create area',
+
+    'admin.providers.show.suspend': 'Suspend',
+    'admin.providers.show.suspension_reason': 'Suspension reason (internal)',
 } as const;
 
 export type TranslationKey = keyof typeof en;

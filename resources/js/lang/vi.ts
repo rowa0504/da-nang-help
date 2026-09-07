@@ -212,6 +212,57 @@ const vi: TranslationDictionary = {
     'admin.reviews.index.about': 'Về',
     'admin.reviews.index.rating_out_of_5': '{rating} / 5',
     'admin.reviews.index.confirm_hide': 'Ẩn đánh giá này từ {rater} về {ratee}?',
+
+    'common.edit': 'Sửa',
+    'common.active': 'Đang hoạt động',
+    'common.inactive': 'Ngừng hoạt động',
+    'common.slug': 'Slug',
+    'common.sort_order': 'Thứ tự sắp xếp',
+    'common.name': 'Tên',
+    'common.created_at': 'Ngày tạo',
+
+    'nav.manage_requests': 'Quản lý yêu cầu',
+    'nav.manage_categories': 'Quản lý danh mục',
+    'nav.manage_areas': 'Quản lý khu vực',
+    'nav.back_to_categories': 'Về danh sách danh mục',
+    'nav.back_to_areas': 'Về danh sách khu vực',
+
+    'admin.dashboard.stats.total_requests': 'Tổng số yêu cầu',
+    'admin.dashboard.stats.open_requests': 'Yêu cầu đang mở',
+    'admin.dashboard.stats.conversion_rate': 'Tỷ lệ thành công',
+    'admin.dashboard.stats.total_jobs': 'Tổng số công việc',
+    'admin.dashboard.stats.completed_jobs': 'Công việc đã hoàn thành',
+    'admin.dashboard.stats.pending_providers': 'Nhà cung cấp chờ xét duyệt',
+    'admin.dashboard.stats.active_categories': 'Danh mục đang hoạt động',
+    'admin.dashboard.stats.active_areas': 'Khu vực đang hoạt động',
+    'admin.dashboard.stats.hidden_reviews': 'Đánh giá đã ẩn',
+
+    'admin.requests.index.title': 'Danh sách yêu cầu',
+    'admin.requests.index.empty': 'Chưa có yêu cầu nào.',
+    'admin.requests.index.visibility': 'Trạng thái hiển thị',
+    'admin.requests.index.confirm_hide': 'Ẩn yêu cầu "{title}"?',
+
+    'admin.categories.index.title': 'Danh mục',
+    'admin.categories.index.empty': 'Chưa có danh mục nào.',
+    'admin.categories.index.create': 'Thêm danh mục',
+    'admin.categories.create.title': 'Thêm danh mục',
+    'admin.categories.edit.title': 'Sửa danh mục',
+    'admin.categories.form.parent': 'Danh mục cha',
+    'admin.categories.form.parent_none': 'Không có (cấp cao nhất)',
+    'admin.categories.form.name_en': 'Tên (Tiếng Anh)',
+    'admin.categories.form.name_ja': 'Tên (Tiếng Nhật)',
+    'admin.categories.form.name_vi': 'Tên (Tiếng Việt)',
+    'admin.categories.form.submit_create': 'Tạo danh mục',
+
+    'admin.areas.index.title': 'Khu vực',
+    'admin.areas.index.empty': 'Chưa có khu vực nào.',
+    'admin.areas.index.create': 'Thêm khu vực',
+    'admin.areas.create.title': 'Thêm khu vực',
+    'admin.areas.edit.title': 'Sửa khu vực',
+    'admin.areas.form.submit_create': 'Tạo khu vực',
+
+    'admin.providers.show.suspend': 'Tạm ngưng',
+    'admin.providers.show.suspension_reason': 'Lý do tạm ngưng (nội bộ)',
 };
 
 export default vi;

@@ -29,6 +29,7 @@ class ProviderProfile extends Model
             'completed_jobs_count' => 'integer',
             'approved_at' => 'datetime',
             'rejected_at' => 'datetime',
+            'suspended_at' => 'datetime',
         ];
     }
 

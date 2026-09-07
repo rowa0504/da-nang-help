@@ -552,6 +552,56 @@ class ServiceRequestTest extends TestCase
         );
     }
 
+    public function test_deactivated_category_and_area_disappear_from_the_create_form(): void
+    {
+        $customer = User::factory()->create();
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+
+        $category->is_active = false;
+        $category->save();
+        $area->is_active = false;
+        $area->save();
+
+        $this->actingAs($customer)->get('/requests/create')->assertInertia(
+            fn (Assert $page) => $page
+                ->where('categories', fn ($categories) => ! collect($categories)->pluck('id')->contains($category->id))
+                ->where('areas', fn ($areas) => ! collect($areas)->pluck('id')->contains($area->id))
+        );
+    }
+
+    public function test_an_existing_requests_category_name_still_resolves_after_deactivation(): void
+    {
+        $category = Category::factory()->create();
+        CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Electrical Work']);
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+
+        $category->is_active = false;
+        $category->save();
+
+        // is_active only affects whether the category is *offered* on the
+        // create/edit pickers (test above) — it must not affect name
+        // resolution for a request that already references it.
+        $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('request.category.name', 'Electrical Work')
+        );
+    }
+
+    public function test_deactivating_a_category_does_not_remove_existing_provider_category_associations(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $provider = $this->approvedProviderFor($category, $area);
+        $countBefore = DB::table('provider_categories')->count();
+
+        $category->is_active = false;
+        $category->save();
+
+        $this->assertSame($countBefore, DB::table('provider_categories')->count());
+        $this->assertTrue($provider->providerProfile->fresh()->categories->contains($category));
+    }
+
     public function test_create_form_categories_do_not_trigger_n_plus_one_from_translations(): void
     {
         $customer = User::factory()->create();

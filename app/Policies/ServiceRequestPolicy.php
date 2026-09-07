@@ -79,6 +79,28 @@ class ServiceRequestPolicy
             && $user->providerProfile?->verification_status === ProviderVerificationStatus::Approved;
     }
 
+    /**
+     * Admin-only listing of all requests for moderation (GET
+     * /admin/requests) — distinct from viewAny() above, which gates the
+     * Customer's own-requests list (GET /requests) and must not be
+     * overloaded for this Admin-wide view.
+     */
+    public function viewAnyForModeration(User $user): bool
+    {
+        return $user->role === UserRole::Admin;
+    }
+
+    /**
+     * Only an Admin may hide, and only while the request is still visible.
+     * No unhide ability exists (matches ReviewPolicy::hide()'s one-way
+     * pattern in Phase 7).
+     */
+    public function hide(User $user, ServiceRequest $serviceRequest): bool
+    {
+        return $user->role === UserRole::Admin
+            && $serviceRequest->moderation_status === ServiceRequestModerationStatus::Visible;
+    }
+
     private function providerMatches(User $user, ServiceRequest $serviceRequest): bool
     {
         $profile = $user->providerProfile;

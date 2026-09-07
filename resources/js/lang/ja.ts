@@ -212,6 +212,57 @@ const ja: TranslationDictionary = {
     'admin.reviews.index.about': '対象',
     'admin.reviews.index.rating_out_of_5': '{rating} / 5',
     'admin.reviews.index.confirm_hide': '{rater} から {ratee} へのこのレビューを非表示にしますか？',
+
+    'common.edit': '編集',
+    'common.active': '有効',
+    'common.inactive': '無効',
+    'common.slug': 'スラッグ',
+    'common.sort_order': '表示順',
+    'common.name': '名前',
+    'common.created_at': '作成日時',
+
+    'nav.manage_requests': '依頼を管理',
+    'nav.manage_categories': 'カテゴリを管理',
+    'nav.manage_areas': 'エリアを管理',
+    'nav.back_to_categories': 'カテゴリ一覧へ戻る',
+    'nav.back_to_areas': 'エリア一覧へ戻る',
+
+    'admin.dashboard.stats.total_requests': '依頼総数',
+    'admin.dashboard.stats.open_requests': '募集中の依頼数',
+    'admin.dashboard.stats.conversion_rate': '成約率',
+    'admin.dashboard.stats.total_jobs': 'ジョブ総数',
+    'admin.dashboard.stats.completed_jobs': '完了ジョブ数',
+    'admin.dashboard.stats.pending_providers': '審査待ちProvider数',
+    'admin.dashboard.stats.active_categories': '有効カテゴリ数',
+    'admin.dashboard.stats.active_areas': '有効エリア数',
+    'admin.dashboard.stats.hidden_reviews': '非表示レビュー数',
+
+    'admin.requests.index.title': '依頼一覧',
+    'admin.requests.index.empty': 'まだ依頼はありません。',
+    'admin.requests.index.visibility': '表示状態',
+    'admin.requests.index.confirm_hide': '「{title}」を非表示にしますか？',
+
+    'admin.categories.index.title': 'カテゴリ',
+    'admin.categories.index.empty': 'まだカテゴリはありません。',
+    'admin.categories.index.create': 'カテゴリを追加',
+    'admin.categories.create.title': 'カテゴリを追加',
+    'admin.categories.edit.title': 'カテゴリを編集',
+    'admin.categories.form.parent': '親カテゴリ',
+    'admin.categories.form.parent_none': 'なし（トップレベル）',
+    'admin.categories.form.name_en': '名称（英語）',
+    'admin.categories.form.name_ja': '名称（日本語）',
+    'admin.categories.form.name_vi': '名称（ベトナム語）',
+    'admin.categories.form.submit_create': 'カテゴリを作成',
+
+    'admin.areas.index.title': 'エリア',
+    'admin.areas.index.empty': 'まだエリアはありません。',
+    'admin.areas.index.create': 'エリアを追加',
+    'admin.areas.create.title': 'エリアを追加',
+    'admin.areas.edit.title': 'エリアを編集',
+    'admin.areas.form.submit_create': 'エリアを作成',
+
+    'admin.providers.show.suspend': '停止',
+    'admin.providers.show.suspension_reason': '停止理由（内部）',
 };
 
 export default ja;

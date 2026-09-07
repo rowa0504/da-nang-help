@@ -55,4 +55,15 @@ class ProviderProfilePolicy
         return $user->role === UserRole::Admin
             && $profile->verification_status === ProviderVerificationStatus::Pending;
     }
+
+    /**
+     * Only an Admin may suspend, and only while the profile is approved.
+     * The Action re-checks this after acquiring a row lock, so this is a
+     * fast, non-authoritative pre-check.
+     */
+    public function suspend(User $user, ProviderProfile $profile): bool
+    {
+        return $user->role === UserRole::Admin
+            && $profile->verification_status === ProviderVerificationStatus::Approved;
+    }
 }

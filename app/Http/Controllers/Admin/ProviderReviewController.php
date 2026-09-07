@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Admin\ApproveProviderAction;
 use App\Actions\Admin\RejectProviderAction;
+use App\Actions\Admin\SuspendProviderAction;
 use App\Exceptions\InvalidProviderVerificationTransitionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectProviderProfileRequest;
+use App\Http\Requests\Admin\SuspendProviderProfileRequest;
 use App\Models\ProviderProfile;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -88,5 +90,18 @@ class ProviderReviewController extends Controller
         }
 
         return redirect()->route('admin.providers.index')->with('status', 'Provider rejected.');
+    }
+
+    public function suspend(SuspendProviderProfileRequest $request, ProviderProfile $providerProfile, SuspendProviderAction $action): RedirectResponse
+    {
+        $this->authorize('suspend', $providerProfile);
+
+        try {
+            $action->handle($request->user(), $providerProfile, $request->validated('note'));
+        } catch (InvalidProviderVerificationTransitionException $e) {
+            return back()->withErrors(['status' => $e->getMessage()]);
+        }
+
+        return redirect()->route('admin.providers.index')->with('status', 'Provider suspended.');
     }
 }

@@ -21,6 +21,16 @@ class ProviderProfileController extends Controller
         $this->authorize('create', ProviderProfile::class);
 
         $profile = $request->user()->providerProfile;
+        if ($profile !== null) {
+            // Unfiltered by is_active: this profile's *own* attached
+            // categories/areas must keep resolving correctly for the
+            // read-only summary view even after an Admin deactivates one
+            // of them later (Phase 9) — the active-only 'categories'/'areas'
+            // props below are for the *picker* only and must not be reused
+            // to resolve names for a profile that may reference an
+            // inactive one.
+            $profile->load(['categories.translations', 'areas']);
+        }
 
         return Inertia::render('Provider/Profile', [
             'profile' => $profile ? [
@@ -29,6 +39,8 @@ class ProviderProfileController extends Controller
                 'verification_status' => $profile->verification_status->value,
                 'category_ids' => $profile->categories->pluck('id'),
                 'area_ids' => $profile->areas->pluck('id'),
+                'category_names' => $profile->categories->map(fn (Category $category) => $category->nameFor(app()->getLocale())),
+                'area_names' => $profile->areas->pluck('name'),
                 'avg_rating' => $profile->avg_rating,
                 'completed_jobs_count' => $profile->completed_jobs_count,
             ] : null,

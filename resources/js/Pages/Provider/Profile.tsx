@@ -34,16 +34,14 @@ export default function Profile({ profile, categories, areas }: Props) {
     const isEditable = profile === null || profile.verification_status === 'rejected';
 
     if (!isEditable) {
-        return <ReadOnlyStatus profile={profile as ProviderProfileData} categories={categories} areas={areas} />;
+        return <ReadOnlyStatus profile={profile as ProviderProfileData} />;
     }
 
     return <EditableForm profile={profile} categories={categories} areas={areas} />;
 }
 
-function ReadOnlyStatus({ profile, categories, areas }: { profile: ProviderProfileData; categories: CategoryOption[]; areas: AreaOption[] }) {
+function ReadOnlyStatus({ profile }: { profile: ProviderProfileData }) {
     const { t } = useTranslation();
-    const categoryNames = categories.filter((c) => profile.category_ids.includes(c.id)).map((c) => c.name);
-    const areaNames = areas.filter((a) => profile.area_ids.includes(a.id)).map((a) => a.name);
 
     return (
         <AppLayout>
@@ -57,9 +55,9 @@ function ReadOnlyStatus({ profile, categories, areas }: { profile: ProviderProfi
                     <dt>{t('common.bio')}</dt>
                     <dd>{profile.bio || t('common.none')}</dd>
                     <dt>{t('common.categories')}</dt>
-                    <dd>{categoryNames.join(', ') || t('common.none')}</dd>
+                    <dd>{profile.category_names.join(', ') || t('common.none')}</dd>
                     <dt>{t('common.areas')}</dt>
-                    <dd>{areaNames.join(', ') || t('common.none')}</dd>
+                    <dd>{profile.area_names.join(', ') || t('common.none')}</dd>
                     <dt>{t('provider.profile.avg_rating')}</dt>
                     <dd>{profile.avg_rating} / 5</dd>
                     <dt>{t('provider.profile.completed_jobs')}</dt>
