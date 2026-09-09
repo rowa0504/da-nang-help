@@ -76,7 +76,7 @@ class ProviderReviewController extends Controller
             return back()->withErrors(['status' => $e->getMessage()]);
         }
 
-        return redirect()->route('admin.providers.index')->with('status', 'Provider approved.');
+        return redirect()->route('admin.providers.index')->with('status', __('messages.provider_approved'));
     }
 
     public function reject(RejectProviderProfileRequest $request, ProviderProfile $providerProfile, RejectProviderAction $action): RedirectResponse
@@ -89,7 +89,7 @@ class ProviderReviewController extends Controller
             return back()->withErrors(['status' => $e->getMessage()]);
         }
 
-        return redirect()->route('admin.providers.index')->with('status', 'Provider rejected.');
+        return redirect()->route('admin.providers.index')->with('status', __('messages.provider_rejected'));
     }
 
     public function suspend(SuspendProviderProfileRequest $request, ProviderProfile $providerProfile, SuspendProviderAction $action): RedirectResponse
@@ -102,6 +102,6 @@ class ProviderReviewController extends Controller
             return back()->withErrors(['status' => $e->getMessage()]);
         }
 
-        return redirect()->route('admin.providers.index')->with('status', 'Provider suspended.');
+        return redirect()->route('admin.providers.index')->with('status', __('messages.provider_suspended'));
     }
 }

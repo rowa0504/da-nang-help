@@ -28,6 +28,7 @@ export interface SharedProps {
         user: AuthUser | null;
     };
     flash: {
+        status: string | null;
         warning: string | null;
     };
     locale: SupportedLocale;

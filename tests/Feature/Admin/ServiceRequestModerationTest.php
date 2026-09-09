@@ -83,6 +83,24 @@ class ServiceRequestModerationTest extends TestCase
         $this->assertSame($admin->id, $fresh->hidden_by);
     }
 
+    public function test_hide_flash_message_is_localized(): void
+    {
+        $expected = [
+            'en' => 'Request hidden.',
+            'ja' => '依頼を非表示にしました。',
+            'vi' => 'Đã ẩn yêu cầu.',
+        ];
+
+        foreach ($expected as $locale => $message) {
+            $admin = User::factory()->admin()->create(['locale' => $locale]);
+            $serviceRequest = ServiceRequest::factory()->create();
+
+            $this->actingAs($admin)
+                ->patch("/admin/requests/{$serviceRequest->id}/hide")
+                ->assertSessionHas('status', $message);
+        }
+    }
+
     public function test_hiding_an_already_hidden_request_is_forbidden(): void
     {
         $admin = User::factory()->admin()->create();

@@ -7,6 +7,7 @@ const en = {
 
     'nav.dashboard': 'Dashboard',
     'nav.logout': 'Log out',
+    'nav.menu': 'Menu',
     'nav.login': 'Log in',
     'nav.register': 'Register',
     'nav.back_to_dashboard': 'Back to dashboard',
@@ -49,6 +50,9 @@ const en = {
     'common.send_offer': 'Send offer',
     'common.review_action': 'Review',
     'common.none': '—',
+    'common.confirm': 'Confirm',
+    'common.cancel': 'Cancel',
+    'common.close': 'Close',
 
     'role.customer': 'Customer',
     'role.provider': 'Provider',
@@ -260,6 +264,22 @@ const en = {
 
     'admin.providers.show.suspend': 'Suspend',
     'admin.providers.show.suspension_reason': 'Suspension reason (internal)',
+    'admin.providers.show.confirm_approve_body': 'Approving grants this provider immediate access to the request feed and the ability to send offers.',
+    'admin.providers.show.confirm_reject_body': 'Rejecting notifies the applicant that their application was not approved. They may reapply by resubmitting their profile.',
+    'admin.providers.show.confirm_suspend_body':
+        'Suspending immediately blocks this provider from receiving new requests or sending new offers. Existing in-progress jobs are not affected.',
+
+    'nav.post_request': 'Post a request',
+    'nav.my_requests': 'My requests',
+    'nav.request_feed': 'Request Feed',
+    'nav.profile': 'Profile',
+    'nav.admin_providers': 'Providers',
+    'nav.admin_requests': 'Requests',
+    'nav.admin_reviews': 'Reviews',
+    'nav.admin_categories': 'Categories',
+    'nav.admin_areas': 'Areas',
+
+    'requests.show.private_info_notice': 'The address and contact details below become visible to the provider once you accept their offer.',
 } as const;
 
 export type TranslationKey = keyof typeof en;

@@ -56,6 +56,28 @@ class CategoryManagementTest extends TestCase
         $this->assertSame('Làm vườn', $category->translations->firstWhere('locale', 'vi')->name);
     }
 
+    public function test_create_and_update_flash_messages_are_localized(): void
+    {
+        $expected = [
+            'en' => ['created' => 'Category created.', 'updated' => 'Category updated.'],
+            'ja' => ['created' => 'カテゴリを作成しました。', 'updated' => 'カテゴリを更新しました。'],
+            'vi' => ['created' => 'Đã tạo danh mục.', 'updated' => 'Đã cập nhật danh mục.'],
+        ];
+
+        foreach ($expected as $locale => $messages) {
+            $admin = User::factory()->admin()->create(['locale' => $locale]);
+
+            $this->actingAs($admin)
+                ->post('/admin/categories', $this->payload(['slug' => "gardening-{$locale}"]))
+                ->assertSessionHas('status', $messages['created']);
+
+            $category = Category::factory()->create();
+            $this->actingAs($admin)
+                ->patch("/admin/categories/{$category->id}", $this->payload())
+                ->assertSessionHas('status', $messages['updated']);
+        }
+    }
+
     public function test_duplicate_slug_is_rejected(): void
     {
         $admin = User::factory()->admin()->create();

@@ -70,6 +70,6 @@ class ReviewModerationController extends Controller
             return back()->withErrors(['status' => $e->getMessage()]);
         }
 
-        return redirect()->route('admin.reviews.index')->with('status', 'Review hidden.');
+        return redirect()->route('admin.reviews.index')->with('status', __('messages.review_hidden'));
     }
 }

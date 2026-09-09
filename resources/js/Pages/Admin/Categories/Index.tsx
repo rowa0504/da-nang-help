@@ -1,67 +1,69 @@
 import { Head, Link } from '@inertiajs/react';
 import { AdminCategoryData } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { DataTable, DataTableColumn } from '@/Components/DataTable';
+import { EmptyState } from '@/Components/EmptyState';
+import { Badge } from '@/Components/Badge';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface Props {
     categories: AdminCategoryData[];
 }
 
-const linkClass = 'text-blue-600 underline hover:text-blue-800';
-const primaryButtonClass =
-    'rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
-
 export default function Index({ categories }: Props) {
     const { t } = useTranslation();
 
+    const columns: DataTableColumn<AdminCategoryData>[] = [
+        {
+            key: 'name',
+            header: t('common.name'),
+            render: (category) => <span style={{ paddingLeft: `${category.depth * 1.5}rem` }}>{category.name}</span>,
+        },
+        { key: 'slug', header: t('common.slug'), render: (category) => category.slug },
+        { key: 'sort_order', header: t('common.sort_order'), render: (category) => category.sort_order },
+        {
+            key: 'status',
+            header: t('common.status'),
+            render: (category) => (
+                <Badge variant={category.is_active ? 'success' : 'neutral'}>{t(category.is_active ? 'common.active' : 'common.inactive')}</Badge>
+            ),
+        },
+        {
+            key: 'action',
+            header: '',
+            render: (category) => (
+                <Link href={`/admin/categories/${category.id}/edit`} className="text-blue-600 underline hover:text-blue-800">
+                    {t('common.edit')}
+                </Link>
+            ),
+        },
+    ];
+
     return (
         <AppLayout>
-            <div className="mx-auto max-w-3xl p-6 font-sans">
+            <div className="mx-auto max-w-6xl p-4 sm:p-6">
                 <Head title={t('admin.categories.index.title')} />
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold text-gray-900">{t('admin.categories.index.title')}</h1>
-                    <Link href="/admin/categories/create" className={primaryButtonClass}>
-                        {t('admin.categories.index.create')}
-                    </Link>
+                <PageHeader
+                    title={t('admin.categories.index.title')}
+                    actions={
+                        <Link href="/admin/categories/create" className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                            {t('admin.categories.index.create')}
+                        </Link>
+                    }
+                />
+
+                <div className="mt-6">
+                    <DataTable
+                        columns={columns}
+                        rows={categories}
+                        rowKey={(category) => category.id}
+                        emptyState={<EmptyState message={t('admin.categories.index.empty')} />}
+                    />
                 </div>
 
-                {categories.length === 0 ? (
-                    <p className="mt-4 text-gray-600">{t('admin.categories.index.empty')}</p>
-                ) : (
-                    <table className="mt-4 w-full border-collapse text-sm">
-                        <thead>
-                            <tr>
-                                <th className="border-b border-gray-300 py-2 text-left">{t('common.name')}</th>
-                                <th className="border-b border-gray-300 py-2 text-left">{t('common.slug')}</th>
-                                <th className="border-b border-gray-300 py-2 text-left">{t('common.sort_order')}</th>
-                                <th className="border-b border-gray-300 py-2 text-left">{t('common.status')}</th>
-                                <th className="border-b border-gray-300 py-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {categories.map((category) => (
-                                <tr key={category.id}>
-                                    <td className="border-b border-gray-100 py-2">
-                                        <span style={{ paddingLeft: `${category.depth * 1.5}rem` }}>{category.name}</span>
-                                    </td>
-                                    <td className="border-b border-gray-100 py-2">{category.slug}</td>
-                                    <td className="border-b border-gray-100 py-2">{category.sort_order}</td>
-                                    <td className="border-b border-gray-100 py-2">
-                                        {category.is_active ? t('common.active') : t('common.inactive')}
-                                    </td>
-                                    <td className="border-b border-gray-100 py-2">
-                                        <Link href={`/admin/categories/${category.id}/edit`} className={linkClass}>
-                                            {t('common.edit')}
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-
                 <p className="mt-4">
-                    <Link href="/dashboard" className={linkClass}>
+                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
                         {t('nav.back_to_dashboard')}
                     </Link>
                 </p>

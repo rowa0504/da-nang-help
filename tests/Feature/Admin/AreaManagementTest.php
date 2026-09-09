@@ -47,6 +47,28 @@ class AreaManagementTest extends TestCase
         $this->assertTrue($area->is_active);
     }
 
+    public function test_create_and_update_flash_messages_are_localized(): void
+    {
+        $expected = [
+            'en' => ['created' => 'Area created.', 'updated' => 'Area updated.'],
+            'ja' => ['created' => 'エリアを作成しました。', 'updated' => 'エリアを更新しました。'],
+            'vi' => ['created' => 'Đã tạo khu vực.', 'updated' => 'Đã cập nhật khu vực.'],
+        ];
+
+        foreach ($expected as $locale => $messages) {
+            $admin = User::factory()->admin()->create(['locale' => $locale]);
+
+            $this->actingAs($admin)
+                ->post('/admin/areas', $this->payload(['slug' => "hoa-vang-{$locale}"]))
+                ->assertSessionHas('status', $messages['created']);
+
+            $area = Area::factory()->create();
+            $this->actingAs($admin)
+                ->patch("/admin/areas/{$area->id}", $this->payload())
+                ->assertSessionHas('status', $messages['updated']);
+        }
+    }
+
     public function test_duplicate_slug_is_rejected(): void
     {
         $admin = User::factory()->admin()->create();

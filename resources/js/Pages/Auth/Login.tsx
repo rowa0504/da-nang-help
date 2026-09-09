@@ -1,6 +1,10 @@
 import { useForm, Head } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { FormField } from '@/Components/FormField';
+import { Input } from '@/Components/Input';
+import { Button } from '@/Components/Button';
 import { useTranslation } from '@/hooks/useTranslation';
 
 type LoginForm = {
@@ -24,36 +28,27 @@ export default function Login() {
 
     return (
         <AppLayout>
-            <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 420 }}>
+            <div className="mx-auto max-w-xl p-4 sm:p-6">
                 <Head title={t('auth.login.title')} />
-                <h1>{t('auth.login.heading')}</h1>
+                <PageHeader title={t('auth.login.heading')} />
 
-                <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <label>
-                        {t('auth.email')}
-                        <input
-                            type="email"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            autoComplete="username"
-                        />
-                    </label>
-                    {errors.email && <div style={{ color: 'crimson' }}>{errors.email}</div>}
+                <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+                    <FormField label={t('auth.email')} htmlFor="email" error={errors.email}>
+                        <Input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} autoComplete="username" />
+                    </FormField>
 
-                    <label>
-                        {t('auth.password')}
-                        <input
+                    <FormField label={t('auth.password')} htmlFor="password" error={errors.password}>
+                        <Input
                             type="password"
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
                             autoComplete="current-password"
                         />
-                    </label>
-                    {errors.password && <div style={{ color: 'crimson' }}>{errors.password}</div>}
+                    </FormField>
 
-                    <button type="submit" disabled={processing}>
+                    <Button type="submit" loading={processing} className="self-start">
                         {t('auth.login.submit')}
-                    </button>
+                    </Button>
                 </form>
             </div>
         </AppLayout>

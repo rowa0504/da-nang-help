@@ -1,15 +1,18 @@
 import { Head, Link } from '@inertiajs/react';
 import { PaginatedData, ServiceRequestData, ServiceRequestStatus } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { Card } from '@/Components/Card';
+import { Badge, BadgeVariant } from '@/Components/Badge';
+import { EmptyState } from '@/Components/EmptyState';
 import { PaginationNav } from '@/Components/PaginationNav';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useLocaleFormat } from '@/hooks/useLocaleFormat';
 import { TranslationKey } from '@/lang/en';
 
 interface Props {
     requests: PaginatedData<ServiceRequestData>;
 }
-
-const linkClass = 'text-blue-600 underline hover:text-blue-800';
 
 // Explicit, exhaustive correspondence table — a missing case here is a
 // compile error, never a silent fallback to an untranslated raw value.
@@ -19,35 +22,46 @@ const REQUEST_STATUS_KEYS: Record<ServiceRequestStatus, TranslationKey> = {
     cancelled: 'status.request.cancelled',
 };
 
+const REQUEST_STATUS_VARIANTS: Record<ServiceRequestStatus, BadgeVariant> = {
+    open: 'info',
+    assigned: 'success',
+    cancelled: 'danger',
+};
+
 export default function Index({ requests }: Props) {
     const { t } = useTranslation();
+    const { formatDateTime } = useLocaleFormat();
 
     return (
         <AppLayout>
-            <div className="mx-auto max-w-2xl p-6 font-sans">
+            <div className="mx-auto max-w-3xl p-4 sm:p-6">
                 <Head title={t('requests.index.title')} />
-                <h1 className="text-2xl font-semibold text-gray-900">{t('requests.index.heading')}</h1>
-                <p className="mt-2">
-                    <Link href="/requests/create" className={linkClass}>
-                        {t('requests.post_new')}
-                    </Link>
-                </p>
+                <PageHeader
+                    title={t('requests.index.heading')}
+                    actions={
+                        <Link href="/requests/create" className="text-blue-600 underline hover:text-blue-800">
+                            {t('requests.post_new')}
+                        </Link>
+                    }
+                />
 
-                {requests.data.length === 0 && <p className="mt-4 text-gray-600">{t('requests.index.empty')}</p>}
-
-                <ul className="mt-4 list-none divide-y divide-gray-200 p-0">
-                    {requests.data.map((request) => (
-                        <li key={request.id} className="py-3">
-                            <Link href={`/requests/${request.id}`} className={linkClass}>
-                                {request.title}
-                            </Link>{' '}
-                            <span className="text-sm text-gray-600">
-                                — <strong className="font-medium text-gray-800">{t(REQUEST_STATUS_KEYS[request.status])}</strong> ·{' '}
-                                {new Date(request.created_at).toLocaleString()}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
+                {requests.data.length === 0 ? (
+                    <EmptyState message={t('requests.index.empty')} actionLabel={t('requests.post_new')} actionHref="/requests/create" />
+                ) : (
+                    <ul className="mt-6 space-y-3">
+                        {requests.data.map((request) => (
+                            <Card as="li" key={request.id}>
+                                <div className="flex items-center justify-between gap-4">
+                                    <Link href={`/requests/${request.id}`} className="font-medium text-blue-600 underline hover:text-blue-800">
+                                        {request.title}
+                                    </Link>
+                                    <Badge variant={REQUEST_STATUS_VARIANTS[request.status]}>{t(REQUEST_STATUS_KEYS[request.status])}</Badge>
+                                </div>
+                                <p className="mt-1 text-sm text-gray-600">{formatDateTime(request.created_at)}</p>
+                            </Card>
+                        ))}
+                    </ul>
+                )}
 
                 <PaginationNav links={requests.meta.links} />
             </div>

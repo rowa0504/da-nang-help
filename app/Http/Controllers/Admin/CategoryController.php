@@ -42,7 +42,7 @@ class CategoryController extends Controller
     {
         $action->handle($request->validated());
 
-        return redirect()->route('admin.categories.index')->with('status', 'Category created.');
+        return redirect()->route('admin.categories.index')->with('status', __('messages.category_created'));
     }
 
     public function edit(Category $category): Response
@@ -84,7 +84,7 @@ class CategoryController extends Controller
             return back()->withErrors(['parent_id' => $e->getMessage()]);
         }
 
-        return redirect()->route('admin.categories.index')->with('status', 'Category updated.');
+        return redirect()->route('admin.categories.index')->with('status', __('messages.category_updated'));
     }
 
     /**

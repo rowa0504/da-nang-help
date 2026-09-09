@@ -2,6 +2,12 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ChangeEvent, FormEvent } from 'react';
 import { AreaOption, CategoryOption, SharedProps, SupportedLocale } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { FormField } from '@/Components/FormField';
+import { Input } from '@/Components/Input';
+import { Textarea } from '@/Components/Textarea';
+import { Select } from '@/Components/Select';
+import { Button } from '@/Components/Button';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface Props {
@@ -21,18 +27,6 @@ type CreateForm = {
     source_locale: SupportedLocale;
     photos: File[];
 };
-
-// Minimal Phase 4 form styling (Tailwind utility classes only, no new
-// components/packages) so inputs are actually visible against Tailwind's
-// base reset.
-const fieldClass =
-    'mt-1 block w-full max-w-xl rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-const textareaClass = `${fieldClass} min-h-32`;
-const labelClass = 'block text-sm font-medium text-gray-700';
-const errorClass = 'mt-1 text-sm text-red-600';
-const primaryButtonClass =
-    'rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
-const linkClass = 'text-blue-600 underline hover:text-blue-800';
 
 // Explicit, exhaustive correspondence table — avoids casting the raw
 // <select> value to SupportedLocale.
@@ -80,129 +74,78 @@ export default function Create({ categories, areas }: Props) {
 
     return (
         <AppLayout>
-            <div className="mx-auto max-w-xl p-6 font-sans">
+            <div className="mx-auto max-w-3xl p-4 sm:p-6">
                 <Head title={t('requests.create.title')} />
-                <h1 className="mb-4 text-2xl font-semibold text-gray-900">{t('requests.create.heading')}</h1>
+                <PageHeader title={t('requests.create.heading')} />
 
-                <form onSubmit={submit} className="flex flex-col gap-4">
-                    <div>
-                        <label className={labelClass}>
-                            {t('common.title')}
-                            <input
-                                type="text"
-                                className={fieldClass}
-                                value={data.title}
-                                onChange={(e) => setData('title', e.target.value)}
-                            />
-                        </label>
-                        {errors.title && <div className={errorClass}>{errors.title}</div>}
-                    </div>
+                <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+                    <FormField label={t('common.title')} htmlFor="title" error={errors.title}>
+                        <Input type="text" value={data.title} onChange={(e) => setData('title', e.target.value)} />
+                    </FormField>
 
-                    <div>
-                        <label className={labelClass}>
-                            {t('common.description')}
-                            <textarea
-                                className={textareaClass}
-                                value={data.description}
-                                onChange={(e) => setData('description', e.target.value)}
-                            />
-                        </label>
-                        {errors.description && <div className={errorClass}>{errors.description}</div>}
-                    </div>
+                    <FormField label={t('common.description')} htmlFor="description" error={errors.description}>
+                        <Textarea value={data.description} onChange={(e) => setData('description', e.target.value)} />
+                    </FormField>
 
-                    <div>
-                        <label className={labelClass}>
-                            {t('common.category')}
-                            <select
-                                className={fieldClass}
-                                value={data.category_id}
-                                onChange={(e) => setData('category_id', Number(e.target.value))}
-                            >
-                                <option value="">{t('requests.create.select_category')}</option>
-                                {categories.map((category) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        {errors.category_id && <div className={errorClass}>{errors.category_id}</div>}
-                    </div>
+                    <FormField label={t('common.category')} htmlFor="category_id" error={errors.category_id}>
+                        <Select value={data.category_id} onChange={(e) => setData('category_id', Number(e.target.value))}>
+                            <option value="">{t('requests.create.select_category')}</option>
+                            {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </Select>
+                    </FormField>
 
-                    <div>
-                        <label className={labelClass}>
-                            {t('common.area')}
-                            <select
-                                className={fieldClass}
-                                value={data.area_id}
-                                onChange={(e) => setData('area_id', Number(e.target.value))}
-                            >
-                                <option value="">{t('requests.create.select_area')}</option>
-                                {areas.map((area) => (
-                                    <option key={area.id} value={area.id}>
-                                        {area.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        {errors.area_id && <div className={errorClass}>{errors.area_id}</div>}
-                    </div>
+                    <FormField label={t('common.area')} htmlFor="area_id" error={errors.area_id}>
+                        <Select value={data.area_id} onChange={(e) => setData('area_id', Number(e.target.value))}>
+                            <option value="">{t('requests.create.select_area')}</option>
+                            {areas.map((area) => (
+                                <option key={area.id} value={area.id}>
+                                    {area.name}
+                                </option>
+                            ))}
+                        </Select>
+                    </FormField>
 
-                    <div>
-                        <label className={labelClass}>
-                            {t('common.address')}
-                            <input
-                                type="text"
-                                className={fieldClass}
-                                value={data.address_text}
-                                onChange={(e) => setData('address_text', e.target.value)}
-                            />
-                        </label>
-                        {errors.address_text && <div className={errorClass}>{errors.address_text}</div>}
-                    </div>
+                    <FormField label={t('common.address')} htmlFor="address_text" error={errors.address_text}>
+                        <Input type="text" value={data.address_text} onChange={(e) => setData('address_text', e.target.value)} />
+                    </FormField>
 
-                    <div>
-                        <label className={labelClass}>
-                            {t('requests.create.latitude')}
-                            <input
-                                type="number"
-                                inputMode="decimal"
-                                step="0.0000001"
-                                min="-90"
-                                max="90"
-                                className={fieldClass}
-                                value={data.lat}
-                                onChange={(e) => setData('lat', e.target.value)}
-                            />
-                        </label>
-                        {errors.lat && <div className={errorClass}>{errors.lat}</div>}
-                    </div>
+                    <FormField label={t('requests.create.latitude')} htmlFor="lat" error={errors.lat}>
+                        <Input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.0000001"
+                            min="-90"
+                            max="90"
+                            value={data.lat}
+                            onChange={(e) => setData('lat', e.target.value)}
+                        />
+                    </FormField>
 
-                    <div>
-                        <label className={labelClass}>
-                            {t('requests.create.longitude')}
-                            <input
-                                type="number"
-                                inputMode="decimal"
-                                step="0.0000001"
-                                min="-180"
-                                max="180"
-                                className={fieldClass}
-                                value={data.lng}
-                                onChange={(e) => setData('lng', e.target.value)}
-                            />
-                        </label>
-                        {errors.lng && <div className={errorClass}>{errors.lng}</div>}
-                    </div>
+                    <FormField label={t('requests.create.longitude')} htmlFor="lng" error={errors.lng}>
+                        <Input
+                            type="number"
+                            inputMode="decimal"
+                            step="0.0000001"
+                            min="-180"
+                            max="180"
+                            value={data.lng}
+                            onChange={(e) => setData('lng', e.target.value)}
+                        />
+                    </FormField>
 
                     <fieldset className="border-0 p-0">
-                        <legend className={labelClass}>{t('common.urgency')}</legend>
+                        <legend className="block text-sm font-medium text-gray-700">{t('common.urgency')}</legend>
                         <label className="mr-4 inline-flex items-center gap-1 text-sm text-gray-700">
                             <input
                                 type="radio"
                                 name="urgency"
                                 checked={data.urgency === 'normal'}
                                 onChange={() => setData('urgency', 'normal')}
+                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                             {t('status.urgency.normal')}
                         </label>
@@ -212,58 +155,55 @@ export default function Create({ categories, areas }: Props) {
                                 name="urgency"
                                 checked={data.urgency === 'urgent'}
                                 onChange={() => setData('urgency', 'urgent')}
+                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                             {t('status.urgency.urgent')}
                         </label>
                     </fieldset>
-                    {errors.urgency && <div className={errorClass}>{errors.urgency}</div>}
+                    {errors.urgency && <p className="text-sm text-red-600">{errors.urgency}</p>}
+
+                    <FormField label={t('requests.create.language_label')} htmlFor="source_locale" error={errors.source_locale}>
+                        <Select
+                            value={data.source_locale}
+                            onChange={(e) => {
+                                if (isSupportedLocale(e.target.value)) {
+                                    setData('source_locale', e.target.value);
+                                }
+                            }}
+                        >
+                            {SOURCE_LOCALE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {t(option.labelKey)}
+                                </option>
+                            ))}
+                        </Select>
+                    </FormField>
 
                     <div>
-                        <label className={labelClass}>
-                            {t('requests.create.language_label')}
-                            <select
-                                className={fieldClass}
-                                value={data.source_locale}
-                                onChange={(e) => {
-                                    if (isSupportedLocale(e.target.value)) {
-                                        setData('source_locale', e.target.value);
-                                    }
-                                }}
-                            >
-                                {SOURCE_LOCALE_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {t(option.labelKey)}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        {errors.source_locale && <div className={errorClass}>{errors.source_locale}</div>}
-                    </div>
-
-                    <div>
-                        <label className={labelClass}>
+                        <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
                             {t('requests.create.photos_label')}
-                            <div className="mt-1 max-w-xl rounded border border-dashed border-gray-300 p-3">
-                                <input
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    multiple
-                                    onChange={onPhotosChange}
-                                    className="block w-full text-sm text-gray-700"
-                                />
-                            </div>
                         </label>
-                        {errors.photos && <div className={errorClass}>{errors.photos}</div>}
+                        <div className="mt-1 rounded border border-dashed border-gray-300 p-3">
+                            <input
+                                id="photos"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                multiple
+                                onChange={onPhotosChange}
+                                className="block w-full text-sm text-gray-700"
+                            />
+                        </div>
+                        {errors.photos && <p className="mt-1 text-sm text-red-600">{errors.photos}</p>}
                         <p className="mt-1 text-xs text-gray-500">{t('requests.create.photos_help')}</p>
                     </div>
 
-                    <button type="submit" disabled={processing} className={`${primaryButtonClass} self-start`}>
+                    <Button type="submit" loading={processing} className="self-start">
                         {t('requests.create.submit')}
-                    </button>
+                    </Button>
                 </form>
 
                 <p className="mt-4">
-                    <Link href="/requests" className={linkClass}>
+                    <Link href="/requests" className="text-blue-600 underline hover:text-blue-800">
                         {t('nav.view_my_requests')}
                     </Link>
                 </p>

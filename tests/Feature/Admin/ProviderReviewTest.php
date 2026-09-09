@@ -213,6 +213,34 @@ class ProviderReviewTest extends TestCase
         $this->assertSame('Repeated complaints from customers.', $fresh->verification_note);
     }
 
+    public function test_approve_reject_suspend_flash_messages_are_localized(): void
+    {
+        $expected = [
+            'en' => ['approved' => 'Provider approved.', 'rejected' => 'Provider rejected.', 'suspended' => 'Provider suspended.'],
+            'ja' => ['approved' => 'Providerを承認しました。', 'rejected' => 'Providerを却下しました。', 'suspended' => 'Providerを停止しました。'],
+            'vi' => ['approved' => 'Đã phê duyệt nhà cung cấp.', 'rejected' => 'Đã từ chối nhà cung cấp.', 'suspended' => 'Đã tạm ngưng nhà cung cấp.'],
+        ];
+
+        foreach ($expected as $locale => $messages) {
+            $admin = User::factory()->admin()->create(['locale' => $locale]);
+
+            $approveProfile = ProviderProfile::factory()->create();
+            $this->actingAs($admin)
+                ->patch("/admin/providers/{$approveProfile->id}/approve")
+                ->assertSessionHas('status', $messages['approved']);
+
+            $rejectProfile = ProviderProfile::factory()->create();
+            $this->actingAs($admin)
+                ->patch("/admin/providers/{$rejectProfile->id}/reject", ['note' => 'x'])
+                ->assertSessionHas('status', $messages['rejected']);
+
+            $suspendProfile = ProviderProfile::factory()->approved()->create();
+            $this->actingAs($admin)
+                ->patch("/admin/providers/{$suspendProfile->id}/suspend", ['note' => 'x'])
+                ->assertSessionHas('status', $messages['suspended']);
+        }
+    }
+
     public function test_suspend_requires_a_note(): void
     {
         $admin = User::factory()->admin()->create();

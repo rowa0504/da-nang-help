@@ -41,7 +41,7 @@ class AreaController extends Controller
     {
         $action->handle($request->validated());
 
-        return redirect()->route('admin.areas.index')->with('status', 'Area created.');
+        return redirect()->route('admin.areas.index')->with('status', __('messages.area_created'));
     }
 
     public function edit(Area $area): Response
@@ -62,6 +62,6 @@ class AreaController extends Controller
     {
         $action->handle($area, $request->validated());
 
-        return redirect()->route('admin.areas.index')->with('status', 'Area updated.');
+        return redirect()->route('admin.areas.index')->with('status', __('messages.area_updated'));
     }
 }

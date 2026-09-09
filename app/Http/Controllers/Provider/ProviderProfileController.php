@@ -70,6 +70,6 @@ class ProviderProfileController extends Controller
             return back()->withErrors(['business_name' => $e->getMessage()]);
         }
 
-        return redirect()->route('dashboard')->with('status', 'Your provider profile has been submitted for review.');
+        return redirect()->route('dashboard')->with('status', __('messages.provider_profile_submitted'));
     }
 }

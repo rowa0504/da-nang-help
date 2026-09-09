@@ -58,6 +58,7 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'flash' => [
+                'status' => fn () => $request->session()->get('status'),
                 'warning' => fn () => $request->session()->get('warning'),
             ],
             // The effective UI locale for this request (set by SetLocale),

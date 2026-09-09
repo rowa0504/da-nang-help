@@ -2,7 +2,14 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { ProviderVerificationStatus } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { Card } from '@/Components/Card';
+import { Badge, BadgeVariant } from '@/Components/Badge';
+import { FormField } from '@/Components/FormField';
+import { Textarea } from '@/Components/Textarea';
+import { Button } from '@/Components/Button';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useConfirm } from '@/hooks/useConfirm';
 import { TranslationKey } from '@/lang/en';
 
 interface ProviderDetail {
@@ -31,24 +38,52 @@ const VERIFICATION_STATUS_KEYS: Record<ProviderVerificationStatus, TranslationKe
     suspended: 'status.provider_verification.suspended',
 };
 
+const VERIFICATION_STATUS_VARIANTS: Record<ProviderVerificationStatus, BadgeVariant> = {
+    pending: 'warning',
+    approved: 'success',
+    rejected: 'danger',
+    suspended: 'danger',
+};
+
 export default function Show({ profile }: Props) {
     const { t } = useTranslation();
+    const { confirm, confirmDialog } = useConfirm();
     const approveForm = useForm({});
     const rejectForm = useForm({ note: '' });
     const suspendForm = useForm({ note: '' });
 
-    function approve(e: FormEvent) {
+    async function approve(e: FormEvent) {
         e.preventDefault();
+        const ok = await confirm({ title: t('common.confirm'), body: t('admin.providers.show.confirm_approve_body') });
+        if (!ok) {
+            return;
+        }
         approveForm.patch(`/admin/providers/${profile.id}/approve`);
     }
 
-    function reject(e: FormEvent) {
+    async function reject(e: FormEvent) {
         e.preventDefault();
+        const ok = await confirm({
+            title: t('common.confirm'),
+            body: t('admin.providers.show.confirm_reject_body'),
+            confirmVariant: 'danger',
+        });
+        if (!ok) {
+            return;
+        }
         rejectForm.patch(`/admin/providers/${profile.id}/reject`);
     }
 
-    function suspend(e: FormEvent) {
+    async function suspend(e: FormEvent) {
         e.preventDefault();
+        const ok = await confirm({
+            title: t('common.confirm'),
+            body: t('admin.providers.show.confirm_suspend_body'),
+            confirmVariant: 'danger',
+        });
+        if (!ok) {
+            return;
+        }
         suspendForm.patch(`/admin/providers/${profile.id}/suspend`);
     }
 
@@ -57,74 +92,84 @@ export default function Show({ profile }: Props) {
 
     return (
         <AppLayout>
-            <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 480 }}>
+            <div className="mx-auto max-w-3xl p-4 sm:p-6">
                 <Head title={t('admin.providers.show.title_prefix', { name: profile.business_name })} />
-                <h1>{profile.business_name}</h1>
-                <p>{t('common.status_label', { status: t(VERIFICATION_STATUS_KEYS[profile.verification_status]) })}</p>
+                <PageHeader
+                    title={profile.business_name}
+                    actions={
+                        <Badge variant={VERIFICATION_STATUS_VARIANTS[profile.verification_status]}>
+                            {t(VERIFICATION_STATUS_KEYS[profile.verification_status])}
+                        </Badge>
+                    }
+                />
 
-                <dl>
-                    <dt>{t('common.bio')}</dt>
-                    <dd>{profile.bio || t('common.none')}</dd>
-                    <dt>{t('common.categories')}</dt>
-                    <dd>{profile.categories.join(', ') || t('common.none')}</dd>
-                    <dt>{t('common.areas')}</dt>
-                    <dd>{profile.areas.join(', ') || t('common.none')}</dd>
-                    <dt>{t('admin.providers.show.applicant')}</dt>
-                    <dd>
-                        {profile.applicant_name} ({profile.applicant_email}
-                        {profile.applicant_phone ? `, ${profile.applicant_phone}` : ''})
-                    </dd>
-                    {profile.verification_note && (
-                        <>
-                            <dt>{t('admin.providers.show.internal_note')}</dt>
-                            <dd>{profile.verification_note}</dd>
-                        </>
-                    )}
-                </dl>
+                <Card className="mt-6">
+                    <dl className="space-y-3 text-sm">
+                        <div>
+                            <dt className="font-medium text-gray-700">{t('common.bio')}</dt>
+                            <dd className="text-gray-800">{profile.bio || t('common.none')}</dd>
+                        </div>
+                        <div>
+                            <dt className="font-medium text-gray-700">{t('common.categories')}</dt>
+                            <dd className="text-gray-800">{profile.categories.join(', ') || t('common.none')}</dd>
+                        </div>
+                        <div>
+                            <dt className="font-medium text-gray-700">{t('common.areas')}</dt>
+                            <dd className="text-gray-800">{profile.areas.join(', ') || t('common.none')}</dd>
+                        </div>
+                        <div>
+                            <dt className="font-medium text-gray-700">{t('admin.providers.show.applicant')}</dt>
+                            <dd className="text-gray-800">
+                                {profile.applicant_name} ({profile.applicant_email}
+                                {profile.applicant_phone ? `, ${profile.applicant_phone}` : ''})
+                            </dd>
+                        </div>
+                        {profile.verification_note && (
+                            <div>
+                                <dt className="font-medium text-gray-700">{t('admin.providers.show.internal_note')}</dt>
+                                <dd className="text-gray-800">{profile.verification_note}</dd>
+                            </div>
+                        )}
+                    </dl>
+                </Card>
 
                 {canDecide && (
-                    <>
+                    <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start">
                         <form onSubmit={approve}>
-                            <button type="submit" disabled={approveForm.processing}>
+                            <Button type="submit" variant="success" loading={approveForm.processing}>
                                 {t('common.approve')}
-                            </button>
+                            </Button>
                         </form>
 
-                        <form onSubmit={reject} style={{ marginTop: '1rem' }}>
-                            <label>
-                                {t('admin.providers.show.rejection_reason')}
-                                <textarea
-                                    value={rejectForm.data.note}
-                                    onChange={(e) => rejectForm.setData('note', e.target.value)}
-                                />
-                            </label>
-                            {rejectForm.errors.note && <div style={{ color: 'crimson' }}>{rejectForm.errors.note}</div>}
-                            <button type="submit" disabled={rejectForm.processing}>
+                        <form onSubmit={reject} className="flex flex-1 flex-col gap-3">
+                            <FormField label={t('admin.providers.show.rejection_reason')} htmlFor="reject_note" error={rejectForm.errors.note}>
+                                <Textarea value={rejectForm.data.note} onChange={(e) => rejectForm.setData('note', e.target.value)} />
+                            </FormField>
+                            <Button type="submit" variant="danger" loading={rejectForm.processing} className="self-start">
                                 {t('common.reject')}
-                            </button>
+                            </Button>
                         </form>
-                    </>
+                    </div>
                 )}
 
                 {canSuspend && (
-                    <form onSubmit={suspend} style={{ marginTop: '1rem' }}>
-                        <label>
-                            {t('admin.providers.show.suspension_reason')}
-                            <textarea
-                                value={suspendForm.data.note}
-                                onChange={(e) => suspendForm.setData('note', e.target.value)}
-                            />
-                        </label>
-                        {suspendForm.errors.note && <div style={{ color: 'crimson' }}>{suspendForm.errors.note}</div>}
-                        <button type="submit" disabled={suspendForm.processing}>
+                    <form onSubmit={suspend} className="mt-6 flex flex-col gap-3">
+                        <FormField label={t('admin.providers.show.suspension_reason')} htmlFor="suspend_note" error={suspendForm.errors.note}>
+                            <Textarea value={suspendForm.data.note} onChange={(e) => suspendForm.setData('note', e.target.value)} />
+                        </FormField>
+                        <Button type="submit" variant="danger" loading={suspendForm.processing} className="self-start">
                             {t('admin.providers.show.suspend')}
-                        </button>
+                        </Button>
                     </form>
                 )}
 
-                <p>
-                    <Link href="/admin/providers">{t('nav.back_to_list')}</Link>
+                <p className="mt-6">
+                    <Link href="/admin/providers" className="text-blue-600 underline hover:text-blue-800">
+                        {t('nav.back_to_list')}
+                    </Link>
                 </p>
+
+                {confirmDialog}
             </div>
         </AppLayout>
     );

@@ -1,6 +1,10 @@
 import { useForm, Head } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { FormField } from '@/Components/FormField';
+import { Input } from '@/Components/Input';
+import { Button } from '@/Components/Button';
 import { useTranslation } from '@/hooks/useTranslation';
 
 type RegisterForm = {
@@ -32,93 +36,71 @@ export default function Register() {
 
     return (
         <AppLayout>
-            <div style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: 420 }}>
+            <div className="mx-auto max-w-xl p-4 sm:p-6">
                 <Head title={t('auth.register.title')} />
-                <h1>{t('auth.register.heading')}</h1>
+                <PageHeader title={t('auth.register.heading')} />
 
-                <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <fieldset style={{ border: 0, padding: 0, display: 'flex', gap: '1rem' }}>
-                        <legend>{t('auth.register.role_legend')}</legend>
-                        <label>
+                <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
+                    <fieldset className="flex gap-4 border-0 p-0">
+                        <legend className="block text-sm font-medium text-gray-700">{t('auth.register.role_legend')}</legend>
+                        <label className="flex items-center gap-2 text-sm text-gray-800">
                             <input
                                 type="radio"
                                 name="role"
                                 value="customer"
                                 checked={data.role === 'customer'}
                                 onChange={() => setData('role', 'customer')}
-                            />{' '}
+                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
                             {t('role.customer')}
                         </label>
-                        <label>
+                        <label className="flex items-center gap-2 text-sm text-gray-800">
                             <input
                                 type="radio"
                                 name="role"
                                 value="provider"
                                 checked={data.role === 'provider'}
                                 onChange={() => setData('role', 'provider')}
-                            />{' '}
+                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
                             {t('role.provider')}
                         </label>
                     </fieldset>
-                    {errors.role && <div style={{ color: 'crimson' }}>{errors.role}</div>}
+                    {errors.role && <p className="text-sm text-red-600">{errors.role}</p>}
 
-                    <label>
-                        {t('auth.name')}
-                        <input
-                            type="text"
-                            value={data.name}
-                            onChange={(e) => setData('name', e.target.value)}
-                            autoComplete="name"
-                        />
-                    </label>
-                    {errors.name && <div style={{ color: 'crimson' }}>{errors.name}</div>}
+                    <FormField label={t('auth.name')} htmlFor="name" error={errors.name}>
+                        <Input type="text" value={data.name} onChange={(e) => setData('name', e.target.value)} autoComplete="name" />
+                    </FormField>
 
-                    <label>
-                        {t('auth.email')}
-                        <input
-                            type="email"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            autoComplete="username"
-                        />
-                    </label>
-                    {errors.email && <div style={{ color: 'crimson' }}>{errors.email}</div>}
+                    <FormField label={t('auth.email')} htmlFor="email" error={errors.email}>
+                        <Input type="email" value={data.email} onChange={(e) => setData('email', e.target.value)} autoComplete="username" />
+                    </FormField>
 
-                    <label>
-                        {t('auth.phone_optional')}
-                        <input
-                            type="tel"
-                            value={data.phone}
-                            onChange={(e) => setData('phone', e.target.value)}
-                            autoComplete="tel"
-                        />
-                    </label>
-                    {errors.phone && <div style={{ color: 'crimson' }}>{errors.phone}</div>}
+                    <FormField label={t('auth.phone_optional')} htmlFor="phone" error={errors.phone}>
+                        <Input type="tel" value={data.phone} onChange={(e) => setData('phone', e.target.value)} autoComplete="tel" />
+                    </FormField>
 
-                    <label>
-                        {t('auth.password')}
-                        <input
+                    <FormField label={t('auth.password')} htmlFor="password" error={errors.password}>
+                        <Input
                             type="password"
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
                             autoComplete="new-password"
                         />
-                    </label>
-                    {errors.password && <div style={{ color: 'crimson' }}>{errors.password}</div>}
+                    </FormField>
 
-                    <label>
-                        {t('auth.confirm_password')}
-                        <input
+                    <FormField label={t('auth.confirm_password')} htmlFor="password_confirmation">
+                        <Input
                             type="password"
                             value={data.password_confirmation}
                             onChange={(e) => setData('password_confirmation', e.target.value)}
                             autoComplete="new-password"
                         />
-                    </label>
+                    </FormField>
 
-                    <button type="submit" disabled={processing}>
+                    <Button type="submit" loading={processing} className="self-start">
                         {t('auth.register.submit')}
-                    </button>
+                    </Button>
                 </form>
             </div>
         </AppLayout>

@@ -1,6 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AdminStats, ProviderVerificationStatus, SharedProps } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { Card } from '@/Components/Card';
+import { Badge, BadgeVariant } from '@/Components/Badge';
 import { useTranslation } from '@/hooks/useTranslation';
 import { TranslationKey } from '@/lang/en';
 
@@ -18,12 +21,38 @@ const ROLE_KEYS: Record<'customer' | 'provider' | 'admin', TranslationKey> = {
     admin: 'role.admin',
 };
 
+const VERIFICATION_STATUS_KEYS: Record<ProviderVerificationStatus, TranslationKey> = {
+    pending: 'status.provider_verification.pending',
+    approved: 'status.provider_verification.approved',
+    rejected: 'status.provider_verification.rejected',
+    suspended: 'status.provider_verification.suspended',
+};
+
+const VERIFICATION_STATUS_VARIANTS: Record<ProviderVerificationStatus, BadgeVariant> = {
+    pending: 'warning',
+    approved: 'success',
+    rejected: 'danger',
+    suspended: 'danger',
+};
+
+const STAT_ITEMS: { key: keyof AdminStats; labelKey: TranslationKey; suffix?: string }[] = [
+    { key: 'total_requests', labelKey: 'admin.dashboard.stats.total_requests' },
+    { key: 'open_requests', labelKey: 'admin.dashboard.stats.open_requests' },
+    { key: 'conversion_rate', labelKey: 'admin.dashboard.stats.conversion_rate', suffix: '%' },
+    { key: 'total_jobs', labelKey: 'admin.dashboard.stats.total_jobs' },
+    { key: 'completed_jobs', labelKey: 'admin.dashboard.stats.completed_jobs' },
+    { key: 'pending_providers', labelKey: 'admin.dashboard.stats.pending_providers' },
+    { key: 'active_categories', labelKey: 'admin.dashboard.stats.active_categories' },
+    { key: 'active_areas', labelKey: 'admin.dashboard.stats.active_areas' },
+    { key: 'hidden_reviews', labelKey: 'admin.dashboard.stats.hidden_reviews' },
+];
+
 // NOTE: This role-based content switch is a *display* convenience only —
 // it is not a security boundary. Anyone can read/modify client-side JS, so
 // it must never be relied on to hide data or actions a role shouldn't have.
-// When real Provider/Admin-only features are added (Phase 3+), enforce
-// access on the server via Laravel Middleware/Policies, and only use this
-// switch to choose which already-authorized UI to render.
+// Navigation itself (post a request, browse feed, admin management links,
+// etc.) now lives in AppLayout's role-based nav — this page only renders
+// role-specific status/summary content that isn't a navigation link.
 export default function Dashboard({ adminStats }: Props) {
     const { auth } = usePage<SharedProps>().props;
     const { t } = useTranslation();
@@ -36,112 +65,78 @@ export default function Dashboard({ adminStats }: Props) {
 
     return (
         <AppLayout>
-            <div style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
+            <div className="mx-auto max-w-6xl p-4 sm:p-6">
                 <Head title={t('dashboard.title')} />
-                <h1>{t('dashboard.title')}</h1>
-                <p>
-                    {t('dashboard.signed_in_as', { name: user.name, email: user.email, role: t(ROLE_KEYS[user.role]) })}
-                </p>
+                <PageHeader
+                    title={t('dashboard.title')}
+                    description={t('dashboard.signed_in_as', { name: user.name, email: user.email, role: t(ROLE_KEYS[user.role]) })}
+                />
 
-                {user.role === 'customer' && (
-                    <p>
-                        <Link href="/requests/create">{t('requests.post_new')}</Link> ·{' '}
-                        <Link href="/requests">{t('nav.view_my_requests')}</Link> · <Link href="/jobs">{t('nav.my_jobs')}</Link>
-                    </p>
+                {user.role === 'provider' && <ProviderStatus status={user.provider_verification_status} />}
+
+                {user.role === 'admin' && adminStats && (
+                    <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                        {STAT_ITEMS.map((item) => (
+                            <Card key={item.key}>
+                                <dt className="text-sm text-gray-600">{t(item.labelKey)}</dt>
+                                <dd className="mt-1 text-2xl font-semibold text-gray-900">
+                                    {adminStats[item.key]}
+                                    {item.suffix ?? ''}
+                                </dd>
+                            </Card>
+                        ))}
+                    </div>
                 )}
-
-                {user.role === 'provider' && (
-                    <>
-                        <ProviderStatus status={user.provider_verification_status} />
-                        {user.provider_verification_status === 'approved' && (
-                            <p>
-                                <Link href="/provider/requests">{t('nav.browse_feed')}</Link>
-                            </p>
-                        )}
-                        <p>
-                            <Link href="/jobs">{t('nav.my_jobs')}</Link>
-                        </p>
-                    </>
-                )}
-
-                {user.role === 'admin' && (
-                    <>
-                        {adminStats && (
-                            <dl style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.25rem 1rem', maxWidth: 320 }}>
-                                <dt>{t('admin.dashboard.stats.total_requests')}</dt>
-                                <dd>{adminStats.total_requests}</dd>
-                                <dt>{t('admin.dashboard.stats.open_requests')}</dt>
-                                <dd>{adminStats.open_requests}</dd>
-                                <dt>{t('admin.dashboard.stats.conversion_rate')}</dt>
-                                <dd>{adminStats.conversion_rate}%</dd>
-                                <dt>{t('admin.dashboard.stats.total_jobs')}</dt>
-                                <dd>{adminStats.total_jobs}</dd>
-                                <dt>{t('admin.dashboard.stats.completed_jobs')}</dt>
-                                <dd>{adminStats.completed_jobs}</dd>
-                                <dt>{t('admin.dashboard.stats.pending_providers')}</dt>
-                                <dd>{adminStats.pending_providers}</dd>
-                                <dt>{t('admin.dashboard.stats.active_categories')}</dt>
-                                <dd>{adminStats.active_categories}</dd>
-                                <dt>{t('admin.dashboard.stats.active_areas')}</dt>
-                                <dd>{adminStats.active_areas}</dd>
-                                <dt>{t('admin.dashboard.stats.hidden_reviews')}</dt>
-                                <dd>{adminStats.hidden_reviews}</dd>
-                            </dl>
-                        )}
-                        <p>
-                            <Link href="/admin/providers">{t('nav.review_pending_providers')}</Link> ·{' '}
-                            <Link href="/admin/reviews">{t('nav.manage_reviews')}</Link> ·{' '}
-                            <Link href="/admin/requests">{t('nav.manage_requests')}</Link> ·{' '}
-                            <Link href="/admin/categories">{t('nav.manage_categories')}</Link> ·{' '}
-                            <Link href="/admin/areas">{t('nav.manage_areas')}</Link>
-                        </p>
-                    </>
-                )}
-
-                <Link href="/logout" method="post" as="button">
-                    {t('nav.logout')}
-                </Link>
             </div>
         </AppLayout>
     );
 }
+
+const PROVIDER_STATUS_MESSAGE_KEYS: Record<ProviderVerificationStatus, TranslationKey> = {
+    pending: 'dashboard.provider_status.pending',
+    approved: 'dashboard.provider_status.approved',
+    rejected: 'dashboard.provider_status.rejected',
+    suspended: 'dashboard.provider_status.suspended',
+};
+
+const PROVIDER_STATUS_ACTION_KEYS: Partial<Record<ProviderVerificationStatus, TranslationKey>> = {
+    pending: 'dashboard.provider_status.view_submission',
+    approved: 'dashboard.provider_status.view_profile',
+    rejected: 'dashboard.provider_status.update_resubmit',
+};
 
 function ProviderStatus({ status }: { status?: ProviderVerificationStatus | null }) {
     const { t } = useTranslation();
 
     if (!status) {
         return (
-            <p>
-                {t('dashboard.provider_status.none')} <Link href="/provider/profile">{t('dashboard.provider_status.setup_link')}</Link>
-            </p>
+            <Card className="mt-6">
+                <p className="text-sm text-gray-700">
+                    {t('dashboard.provider_status.none')}{' '}
+                    <Link href="/provider/profile" className="text-blue-600 underline hover:text-blue-800">
+                        {t('dashboard.provider_status.setup_link')}
+                    </Link>
+                </p>
+            </Card>
         );
     }
 
-    switch (status) {
-        case 'pending':
-            return (
-                <p>
-                    {t('dashboard.provider_status.pending')}{' '}
-                    <Link href="/provider/profile">{t('dashboard.provider_status.view_submission')}</Link>
-                </p>
-            );
-        case 'approved':
-            return (
-                <p>
-                    {t('dashboard.provider_status.approved')}{' '}
-                    <Link href="/provider/profile">{t('dashboard.provider_status.view_profile')}</Link>
-                </p>
-            );
-        case 'rejected':
-            return (
-                <p>
-                    {t('dashboard.provider_status.rejected')}{' '}
-                    <Link href="/provider/profile">{t('dashboard.provider_status.update_resubmit')}</Link>
-                </p>
-            );
-        case 'suspended':
-            return <p>{t('dashboard.provider_status.suspended')}</p>;
-        default:
-            return null;
-    }
+    const actionKey = PROVIDER_STATUS_ACTION_KEYS[status];
+
+    return (
+        <Card className="mt-6">
+            <Badge variant={VERIFICATION_STATUS_VARIANTS[status]}>{t(VERIFICATION_STATUS_KEYS[status])}</Badge>
+            <p className="mt-2 text-sm text-gray-700">
+                {t(PROVIDER_STATUS_MESSAGE_KEYS[status])}
+                {actionKey && (
+                    <>
+                        {' '}
+                        <Link href="/provider/profile" className="text-blue-600 underline hover:text-blue-800">
+                            {t(actionKey)}
+                        </Link>
+                    </>
+                )}
+            </p>
+        </Card>
+    );
 }

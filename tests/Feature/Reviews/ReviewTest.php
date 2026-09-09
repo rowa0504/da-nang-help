@@ -179,6 +179,25 @@ class ReviewTest extends TestCase
         $this->assertSame($countBefore, $job->provider->providerProfile->fresh()->completed_jobs_count);
     }
 
+    public function test_admin_hide_review_flash_message_is_localized(): void
+    {
+        $expected = [
+            'en' => 'Review hidden.',
+            'ja' => 'レビューを非表示にしました。',
+            'vi' => 'Đã ẩn đánh giá.',
+        ];
+
+        foreach ($expected as $locale => $message) {
+            $admin = User::factory()->admin()->create(['locale' => $locale]);
+            $job = $this->completedJob();
+            $review = Review::factory()->forJob($job)->create();
+
+            $this->actingAs($admin)
+                ->patch("/admin/reviews/{$review->id}/hide")
+                ->assertSessionHas('status', $message);
+        }
+    }
+
     public function test_already_hidden_review_cannot_be_hidden_again(): void
     {
         $job = $this->completedJob();

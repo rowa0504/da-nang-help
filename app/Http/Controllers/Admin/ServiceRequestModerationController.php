@@ -67,6 +67,6 @@ class ServiceRequestModerationController extends Controller
             return back()->withErrors(['status' => $e->getMessage()]);
         }
 
-        return redirect()->route('admin.requests.index')->with('status', 'Request hidden.');
+        return redirect()->route('admin.requests.index')->with('status', __('messages.request_hidden'));
     }
 }

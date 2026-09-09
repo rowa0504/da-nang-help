@@ -10,6 +10,7 @@ const vi: TranslationDictionary = {
 
     'nav.dashboard': 'Bảng điều khiển',
     'nav.logout': 'Đăng xuất',
+    'nav.menu': 'Menu',
     'nav.login': 'Đăng nhập',
     'nav.register': 'Đăng ký',
     'nav.back_to_dashboard': 'Về bảng điều khiển',
@@ -52,6 +53,9 @@ const vi: TranslationDictionary = {
     'common.send_offer': 'Gửi đề nghị',
     'common.review_action': 'Xem xét',
     'common.none': '—',
+    'common.confirm': 'Xác nhận',
+    'common.cancel': 'Hủy',
+    'common.close': 'Đóng',
 
     'role.customer': 'Khách hàng',
     'role.provider': 'Nhà cung cấp',
@@ -263,6 +267,21 @@ const vi: TranslationDictionary = {
 
     'admin.providers.show.suspend': 'Tạm ngưng',
     'admin.providers.show.suspension_reason': 'Lý do tạm ngưng (nội bộ)',
+    'admin.providers.show.confirm_approve_body': 'Việc phê duyệt sẽ cho phép nhà cung cấp này xem nguồn yêu cầu và gửi báo giá ngay lập tức.',
+    'admin.providers.show.confirm_reject_body': 'Việc từ chối sẽ thông báo cho người nộp đơn rằng đơn của họ không được phê duyệt. Họ có thể nộp lại hồ sơ để đăng ký lại.',
+    'admin.providers.show.confirm_suspend_body': 'Việc tạm ngưng sẽ ngay lập tức ngăn nhà cung cấp này nhận yêu cầu mới hoặc gửi báo giá mới. Các công việc đang thực hiện không bị ảnh hưởng.',
+
+    'nav.post_request': 'Đăng yêu cầu',
+    'nav.my_requests': 'Yêu cầu của tôi',
+    'nav.request_feed': 'Nguồn yêu cầu',
+    'nav.profile': 'Hồ sơ',
+    'nav.admin_providers': 'Providers',
+    'nav.admin_requests': 'Requests',
+    'nav.admin_reviews': 'Reviews',
+    'nav.admin_categories': 'Categories',
+    'nav.admin_areas': 'Areas',
+
+    'requests.show.private_info_notice': 'Địa chỉ và thông tin liên hệ bên dưới sẽ được hiển thị cho nhà cung cấp khi bạn chấp nhận báo giá của họ.',
 };
 
 export default vi;

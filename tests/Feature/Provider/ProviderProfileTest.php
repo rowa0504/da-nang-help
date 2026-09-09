@@ -51,6 +51,23 @@ class ProviderProfileTest extends TestCase
         $this->assertTrue($profile->areas->contains($area));
     }
 
+    public function test_submit_flash_message_is_localized(): void
+    {
+        $expected = [
+            'en' => 'Your provider profile has been submitted for review.',
+            'ja' => 'Providerプロフィールを審査のために送信しました。',
+            'vi' => 'Hồ sơ nhà cung cấp của bạn đã được gửi để xét duyệt.',
+        ];
+
+        foreach ($expected as $locale => $message) {
+            $provider = User::factory()->provider()->create(['locale' => $locale]);
+
+            $this->actingAs($provider)
+                ->post('/provider/profile', $this->payload())
+                ->assertSessionHas('status', $message);
+        }
+    }
+
     public function test_customer_cannot_view_or_submit_provider_profile(): void
     {
         $customer = User::factory()->create();

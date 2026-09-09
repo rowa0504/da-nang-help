@@ -10,6 +10,7 @@ const ja: TranslationDictionary = {
 
     'nav.dashboard': 'ダッシュボード',
     'nav.logout': 'ログアウト',
+    'nav.menu': 'メニュー',
     'nav.login': 'ログイン',
     'nav.register': '新規登録',
     'nav.back_to_dashboard': 'ダッシュボードへ戻る',
@@ -52,6 +53,9 @@ const ja: TranslationDictionary = {
     'common.send_offer': 'オファーを送る',
     'common.review_action': '確認',
     'common.none': '—',
+    'common.confirm': '確認',
+    'common.cancel': 'キャンセル',
+    'common.close': '閉じる',
 
     'role.customer': '依頼者',
     'role.provider': 'プロバイダー',
@@ -263,6 +267,21 @@ const ja: TranslationDictionary = {
 
     'admin.providers.show.suspend': '停止',
     'admin.providers.show.suspension_reason': '停止理由（内部）',
+    'admin.providers.show.confirm_approve_body': '承認すると、このProviderは直ちに依頼フィードの閲覧とオファー送信ができるようになります。',
+    'admin.providers.show.confirm_reject_body': '却下すると、申請者へ承認されなかったことが通知されます。プロフィールを再提出することで再申請できます。',
+    'admin.providers.show.confirm_suspend_body': '停止すると、このProviderは新規依頼の受付・新規オファー送信が直ちにできなくなります。進行中のJobには影響しません。',
+
+    'nav.post_request': '依頼を投稿',
+    'nav.my_requests': '依頼一覧',
+    'nav.request_feed': '依頼フィード',
+    'nav.profile': 'プロフィール',
+    'nav.admin_providers': 'Providers',
+    'nav.admin_requests': 'Requests',
+    'nav.admin_reviews': 'Reviews',
+    'nav.admin_categories': 'Categories',
+    'nav.admin_areas': 'Areas',
+
+    'requests.show.private_info_notice': '以下の住所・連絡先は、オファーを承諾した相手のProviderに開示されます。',
 };
 
 export default ja;

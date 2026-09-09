@@ -1,5 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { DataTable, DataTableColumn } from '@/Components/DataTable';
+import { EmptyState } from '@/Components/EmptyState';
+import { useLocaleFormat } from '@/hooks/useLocaleFormat';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface ProviderListItem {
@@ -16,44 +20,50 @@ interface Props {
 
 export default function Index({ profiles }: Props) {
     const { t } = useTranslation();
+    const { formatDate } = useLocaleFormat();
+
+    const columns: DataTableColumn<ProviderListItem>[] = [
+        { key: 'business_name', header: t('admin.providers.index.business_name'), render: (profile) => profile.business_name },
+        {
+            key: 'applicant',
+            header: t('admin.providers.index.applicant'),
+            render: (profile) => `${profile.applicant_name} (${profile.applicant_email})`,
+        },
+        {
+            key: 'submitted',
+            header: t('admin.providers.index.submitted'),
+            render: (profile) => (profile.created_at ? formatDate(profile.created_at) : t('common.none')),
+        },
+        {
+            key: 'action',
+            header: '',
+            render: (profile) => (
+                <Link href={`/admin/providers/${profile.id}`} className="text-blue-600 underline hover:text-blue-800">
+                    {t('common.review_action')}
+                </Link>
+            ),
+        },
+    ];
 
     return (
         <AppLayout>
-            <div style={{ fontFamily: 'sans-serif', padding: '2rem' }}>
+            <div className="mx-auto max-w-6xl p-4 sm:p-6">
                 <Head title={t('admin.providers.index.title')} />
-                <h1>{t('admin.providers.index.heading')}</h1>
+                <PageHeader title={t('admin.providers.index.heading')} />
 
-                {profiles.length === 0 ? (
-                    <p>{t('admin.providers.index.empty')}</p>
-                ) : (
-                    <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-                        <thead>
-                            <tr>
-                                <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc' }}>{t('admin.providers.index.business_name')}</th>
-                                <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc' }}>{t('admin.providers.index.applicant')}</th>
-                                <th style={{ textAlign: 'left', borderBottom: '1px solid #ccc' }}>{t('admin.providers.index.submitted')}</th>
-                                <th style={{ borderBottom: '1px solid #ccc' }}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {profiles.map((profile) => (
-                                <tr key={profile.id}>
-                                    <td>{profile.business_name}</td>
-                                    <td>
-                                        {profile.applicant_name} ({profile.applicant_email})
-                                    </td>
-                                    <td>{profile.created_at}</td>
-                                    <td>
-                                        <Link href={`/admin/providers/${profile.id}`}>{t('common.review_action')}</Link>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+                <div className="mt-6">
+                    <DataTable
+                        columns={columns}
+                        rows={profiles}
+                        rowKey={(profile) => profile.id}
+                        emptyState={<EmptyState message={t('admin.providers.index.empty')} />}
+                    />
+                </div>
 
-                <p>
-                    <Link href="/dashboard">{t('nav.back_to_dashboard')}</Link>
+                <p className="mt-6">
+                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
+                        {t('nav.back_to_dashboard')}
+                    </Link>
                 </p>
             </div>
         </AppLayout>

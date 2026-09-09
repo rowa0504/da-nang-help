@@ -2,8 +2,18 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { JobData, OfferData, OfferStatus, ServiceRequestData, ServiceRequestStatus, ServiceRequestUrgency, SharedProps, SupportedLocale } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
+import { PageHeader } from '@/Components/PageHeader';
+import { Card } from '@/Components/Card';
+import { Badge, BadgeVariant } from '@/Components/Badge';
+import { Alert } from '@/Components/Alert';
+import { FormField } from '@/Components/FormField';
+import { Input } from '@/Components/Input';
+import { Textarea } from '@/Components/Textarea';
+import { Select } from '@/Components/Select';
+import { Button } from '@/Components/Button';
 import { TranslatedText } from '@/Components/TranslatedText';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useConfirm } from '@/hooks/useConfirm';
 import { TranslationKey } from '@/lang/en';
 
 interface Props {
@@ -13,22 +23,17 @@ interface Props {
     job: JobData | null;
 }
 
-const linkClass = 'text-blue-600 underline hover:text-blue-800';
-const dangerButtonClass =
-    'rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50';
-const primaryButtonClass =
-    'rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
-const fieldClass =
-    'mt-1 block w-full max-w-xl rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
-const labelClass = 'block text-sm font-medium text-gray-700';
-const errorClass = 'mt-1 text-sm text-red-600';
-
 // Explicit, exhaustive correspondence tables — a missing case here is a
 // compile error, never a silent fallback to an untranslated raw value.
 const REQUEST_STATUS_KEYS: Record<ServiceRequestStatus, TranslationKey> = {
     open: 'status.request.open',
     assigned: 'status.request.assigned',
     cancelled: 'status.request.cancelled',
+};
+const REQUEST_STATUS_VARIANTS: Record<ServiceRequestStatus, BadgeVariant> = {
+    open: 'info',
+    assigned: 'success',
+    cancelled: 'danger',
 };
 const URGENCY_KEYS: Record<ServiceRequestUrgency, TranslationKey> = {
     normal: 'status.urgency.normal',
@@ -40,6 +45,13 @@ const OFFER_STATUS_KEYS: Record<OfferStatus, TranslationKey> = {
     rejected: 'status.offer.rejected',
     withdrawn: 'status.offer.withdrawn',
     cancelled: 'status.offer.cancelled',
+};
+const OFFER_STATUS_VARIANTS: Record<OfferStatus, BadgeVariant> = {
+    pending: 'warning',
+    accepted: 'success',
+    rejected: 'danger',
+    withdrawn: 'neutral',
+    cancelled: 'neutral',
 };
 const SOURCE_LOCALE_OPTIONS: { value: SupportedLocale; labelKey: 'language.en' | 'language.ja' | 'language.vi' }[] = [
     { value: 'en', labelKey: 'language.en' },
@@ -62,14 +74,17 @@ function toDatetimeLocalValue(iso?: string | null): string {
 }
 
 export default function Show({ request, myOffer, canOffer, job }: Props) {
-    const { auth, flash } = usePage<SharedProps>().props;
+    const { auth } = usePage<SharedProps>().props;
     const { t } = useTranslation();
+    const { confirm, confirmDialog } = useConfirm();
     const { patch, processing } = useForm();
 
-    function cancel() {
-        if (confirm(t('requests.show.confirm_cancel'))) {
-            patch(`/requests/${request.id}/cancel`);
+    async function cancel() {
+        const ok = await confirm({ title: t('common.confirm'), body: t('requests.show.confirm_cancel'), confirmVariant: 'danger' });
+        if (!ok) {
+            return;
         }
+        patch(`/requests/${request.id}/cancel`);
     }
 
     // address_text/lat/lng/customer are only present in props when the
@@ -81,20 +96,14 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
 
     return (
         <AppLayout>
-            <div className="mx-auto max-w-2xl p-6 font-sans">
+            <div className="mx-auto max-w-3xl p-4 sm:p-6">
                 <Head title={request.title} />
 
-                {flash.warning && (
-                    <p className="mb-4 rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-                        {flash.warning}
-                    </p>
-                )}
-
-                <h1 className="text-2xl font-semibold text-gray-900">
-                    <TranslatedText translation={request.title_translation} translated={request.title} />
-                </h1>
+                <PageHeader
+                    title={<TranslatedText translation={request.title_translation} translated={request.title} />}
+                    actions={<Badge variant={REQUEST_STATUS_VARIANTS[request.status]}>{t(REQUEST_STATUS_KEYS[request.status])}</Badge>}
+                />
                 <p className="mt-1 text-sm text-gray-600">
-                    <strong className="font-medium text-gray-800">{t('common.status')}:</strong> {t(REQUEST_STATUS_KEYS[request.status])} ·{' '}
                     <strong className="font-medium text-gray-800">{t('common.urgency')}:</strong> {t(URGENCY_KEYS[request.urgency])}
                 </p>
                 <p className="mt-3 text-gray-800">
@@ -108,45 +117,49 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
                 {request.photos.length > 0 && (
                     <div className="mt-4 flex flex-wrap gap-2">
                         {request.photos.map((photo) => (
-                            <img
-                                key={photo.id}
-                                src={photo.url}
-                                alt=""
-                                className="h-40 w-40 rounded border border-gray-200 object-cover"
-                            />
+                            <img key={photo.id} src={photo.url} alt="" className="h-40 w-40 rounded border border-gray-200 object-cover" />
                         ))}
                     </div>
                 )}
 
                 {canSeePrivate && (
-                    <dl className="mt-4 space-y-1 rounded border border-gray-200 p-4 text-sm">
-                        <dt className="font-medium text-gray-700">{t('common.address')}</dt>
-                        <dd className="text-gray-800">{request.address_text}</dd>
-                        <dt className="font-medium text-gray-700">{t('requests.show.coordinates')}</dt>
-                        <dd className="text-gray-800">
-                            {request.lat}, {request.lng}
-                        </dd>
-                        {request.customer && (
-                            <>
-                                <dt className="font-medium text-gray-700">{t('common.customer')}</dt>
-                                <dd className="text-gray-800">
-                                    {request.customer.name} ({request.customer.email}
-                                    {request.customer.phone ? `, ${request.customer.phone}` : ''})
-                                </dd>
-                            </>
-                        )}
-                    </dl>
+                    <div className="mt-4 space-y-2">
+                        <Alert variant="info">{t('requests.show.private_info_notice')}</Alert>
+                        <Card>
+                            <dl className="space-y-3 text-sm">
+                                <div>
+                                    <dt className="font-medium text-gray-700">{t('common.address')}</dt>
+                                    <dd className="text-gray-800">{request.address_text}</dd>
+                                </div>
+                                <div>
+                                    <dt className="font-medium text-gray-700">{t('requests.show.coordinates')}</dt>
+                                    <dd className="text-gray-800">
+                                        {request.lat}, {request.lng}
+                                    </dd>
+                                </div>
+                                {request.customer && (
+                                    <div>
+                                        <dt className="font-medium text-gray-700">{t('common.customer')}</dt>
+                                        <dd className="text-gray-800">
+                                            {request.customer.name} ({request.customer.email}
+                                            {request.customer.phone ? `, ${request.customer.phone}` : ''})
+                                        </dd>
+                                    </div>
+                                )}
+                            </dl>
+                        </Card>
+                    </div>
                 )}
 
                 {auth.user?.role === 'customer' && request.status === 'open' && (
-                    <button onClick={cancel} disabled={processing} className={`${dangerButtonClass} mt-4`}>
+                    <Button variant="danger" loading={processing} onClick={cancel} className="mt-4">
                         {t('requests.show.cancel')}
-                    </button>
+                    </Button>
                 )}
 
                 {auth.user?.role === 'customer' && (
                     <p className="mt-4">
-                        <Link href={`/requests/${request.id}/offers`} className={linkClass}>
+                        <Link href={`/requests/${request.id}/offers`} className="text-blue-600 underline hover:text-blue-800">
                             {t('nav.view_offers')}
                         </Link>
                     </p>
@@ -158,17 +171,19 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
 
                 {job && (
                     <p className="mt-4">
-                        <Link href={`/jobs/${job.id}`} className={linkClass}>
+                        <Link href={`/jobs/${job.id}`} className="text-blue-600 underline hover:text-blue-800">
                             {t('nav.view_job')}
                         </Link>
                     </p>
                 )}
 
                 <p className="mt-4">
-                    <Link href="/requests" className={linkClass}>
+                    <Link href="/requests" className="text-blue-600 underline hover:text-blue-800">
                         {t('nav.back_to_my_requests')}
                     </Link>
                 </p>
+
+                {confirmDialog}
             </div>
         </AppLayout>
     );
@@ -187,13 +202,13 @@ function OfferSection({ requestId, myOffer, canOffer }: { requestId: number; myO
 
     if (myOffer && myOffer.status !== 'pending') {
         return (
-            <div className="mt-6 rounded border border-gray-200 p-4">
+            <Card className="mt-6">
                 <h2 className="text-lg font-semibold text-gray-900">{t('requests.show.your_offer')}</h2>
-                <p className="mt-1 text-sm text-gray-600">{t('common.status_label', { status: t(OFFER_STATUS_KEYS[myOffer.status]) })}</p>
+                <Badge variant={OFFER_STATUS_VARIANTS[myOffer.status]}>{t(OFFER_STATUS_KEYS[myOffer.status])}</Badge>
                 <p className="mt-2 text-gray-800">
                     {myOffer.currency} {myOffer.price} — <TranslatedText translation={myOffer.message_translation} translated={myOffer.message} />
                 </p>
-            </div>
+            </Card>
         );
     }
 
@@ -211,6 +226,7 @@ function OfferSection({ requestId, myOffer, canOffer }: { requestId: number; myO
 function OfferForm({ requestId, existingOffer }: { requestId: number; existingOffer: OfferData | null }) {
     const { auth } = usePage<SharedProps>().props;
     const { t } = useTranslation();
+    const { confirm, confirmDialog } = useConfirm();
     const rawLocale = auth.user?.locale;
     const defaultLocale: SupportedLocale = rawLocale !== undefined && isSupportedLocale(rawLocale) ? rawLocale : 'en';
 
@@ -240,111 +256,81 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
         }
     }
 
-    function withdraw() {
-        if (existingOffer && confirm(t('requests.show.confirm_withdraw'))) {
-            patch(`/offers/${existingOffer.id}/withdraw`);
+    async function withdraw() {
+        if (!existingOffer) {
+            return;
         }
+        const ok = await confirm({ title: t('common.confirm'), body: t('requests.show.confirm_withdraw'), confirmVariant: 'danger' });
+        if (!ok) {
+            return;
+        }
+        patch(`/offers/${existingOffer.id}/withdraw`);
     }
 
     return (
-        <div className="mt-6 rounded border border-gray-200 p-4">
+        <Card className="mt-6">
             <h2 className="text-lg font-semibold text-gray-900">
                 {existingOffer ? t('requests.show.edit_offer_heading') : t('requests.show.send_offer_heading')}
             </h2>
             <form onSubmit={submit} className="mt-3 flex flex-col gap-4">
-                <div>
-                    <label className={labelClass}>
-                        {t('common.price')}
-                        <input
-                            type="number"
-                            min="0"
-                            max="9999999999.99"
-                            step="0.01"
-                            className={fieldClass}
-                            value={data.price}
-                            onChange={(e) => setData('price', e.target.value)}
-                        />
-                    </label>
-                    {errors.price && <div className={errorClass}>{errors.price}</div>}
-                </div>
+                <FormField label={t('common.price')} htmlFor="price" error={errors.price}>
+                    <Input
+                        type="number"
+                        min="0"
+                        max="9999999999.99"
+                        step="0.01"
+                        value={data.price}
+                        onChange={(e) => setData('price', e.target.value)}
+                    />
+                </FormField>
 
-                <div>
-                    <label className={labelClass}>
-                        {t('common.currency')}
-                        <input
-                            type="text"
-                            maxLength={3}
-                            className={fieldClass}
-                            value={data.currency}
-                            onChange={(e) => setData('currency', e.target.value.toUpperCase())}
-                        />
-                    </label>
-                    {errors.currency && <div className={errorClass}>{errors.currency}</div>}
-                </div>
+                <FormField label={t('common.currency')} htmlFor="currency" error={errors.currency}>
+                    <Input
+                        type="text"
+                        maxLength={3}
+                        value={data.currency}
+                        onChange={(e) => setData('currency', e.target.value.toUpperCase())}
+                    />
+                </FormField>
 
-                <div>
-                    <label className={labelClass}>
-                        {t('common.message')}
-                        <textarea
-                            className={`${fieldClass} min-h-32`}
-                            value={data.message}
-                            onChange={(e) => setData('message', e.target.value)}
-                        />
-                    </label>
-                    {errors.message && <div className={errorClass}>{errors.message}</div>}
-                </div>
+                <FormField label={t('common.message')} htmlFor="message" error={errors.message}>
+                    <Textarea value={data.message} onChange={(e) => setData('message', e.target.value)} />
+                </FormField>
 
-                <div>
-                    <label className={labelClass}>
-                        {t('requests.show.available_from_optional')}
-                        <input
-                            type="datetime-local"
-                            className={fieldClass}
-                            value={data.available_at}
-                            onChange={(e) => setData('available_at', e.target.value)}
-                        />
-                    </label>
-                    {errors.available_at && <div className={errorClass}>{errors.available_at}</div>}
-                </div>
+                <FormField label={t('requests.show.available_from_optional')} htmlFor="available_at" error={errors.available_at}>
+                    <Input type="datetime-local" value={data.available_at} onChange={(e) => setData('available_at', e.target.value)} />
+                </FormField>
 
-                <div>
-                    <label className={labelClass}>
-                        {t('requests.show.offer_language_label')}
-                        <select
-                            className={fieldClass}
-                            value={data.source_locale}
-                            onChange={(e) => {
-                                if (isSupportedLocale(e.target.value)) {
-                                    setData('source_locale', e.target.value);
-                                }
-                            }}
-                        >
-                            {SOURCE_LOCALE_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {t(option.labelKey)}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
-                    {errors.source_locale && <div className={errorClass}>{errors.source_locale}</div>}
-                </div>
+                <FormField label={t('requests.show.offer_language_label')} htmlFor="source_locale" error={errors.source_locale}>
+                    <Select
+                        value={data.source_locale}
+                        onChange={(e) => {
+                            if (isSupportedLocale(e.target.value)) {
+                                setData('source_locale', e.target.value);
+                            }
+                        }}
+                    >
+                        {SOURCE_LOCALE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {t(option.labelKey)}
+                            </option>
+                        ))}
+                    </Select>
+                </FormField>
 
                 <div className="flex gap-2">
-                    <button type="submit" disabled={processing} className={`${primaryButtonClass} self-start`}>
+                    <Button type="submit" loading={processing} className="self-start">
                         {existingOffer ? t('common.save_changes') : t('common.send_offer')}
-                    </button>
+                    </Button>
                     {existingOffer && (
-                        <button
-                            type="button"
-                            onClick={withdraw}
-                            disabled={processing}
-                            className={`${dangerButtonClass} self-start`}
-                        >
+                        <Button type="button" variant="danger" loading={processing} onClick={withdraw} className="self-start">
                             {t('common.withdraw')}
-                        </button>
+                        </Button>
                     )}
                 </div>
             </form>
-        </div>
+
+            {confirmDialog}
+        </Card>
     );
 }
