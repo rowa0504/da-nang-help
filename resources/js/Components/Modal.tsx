@@ -123,7 +123,7 @@ export function Modal({
                 <div id={bodyId} className="mt-2 text-sm text-gray-700">
                     {children}
                 </div>
-                <div className="mt-6 flex justify-end gap-2">
+                <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     {onConfirm ? (
                         <>
                             <Button type="button" variant="secondary" onClick={onClose}>

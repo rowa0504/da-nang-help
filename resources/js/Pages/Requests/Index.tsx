@@ -9,6 +9,7 @@ import { PaginationNav } from '@/Components/PaginationNav';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useLocaleFormat } from '@/hooks/useLocaleFormat';
 import { TranslationKey } from '@/lang/en';
+import { ClipboardList } from 'lucide-react';
 
 interface Props {
     requests: PaginatedData<ServiceRequestData>;
@@ -39,20 +40,26 @@ export default function Index({ requests }: Props) {
                 <PageHeader
                     title={t('requests.index.heading')}
                     actions={
-                        <Link href="/requests/create" className="text-blue-600 underline hover:text-blue-800">
+                        <Link href="/requests/create" className="text-brand-600 underline hover:text-brand-700">
                             {t('requests.post_new')}
                         </Link>
                     }
                 />
 
                 {requests.data.length === 0 ? (
-                    <EmptyState message={t('requests.index.empty')} actionLabel={t('requests.post_new')} actionHref="/requests/create" />
+                    <EmptyState
+                        icon={<ClipboardList className="h-8 w-8" />}
+                        title={t('requests.index.empty')}
+                        description={t('requests.index.empty_description')}
+                        actionLabel={t('requests.post_new')}
+                        actionHref="/requests/create"
+                    />
                 ) : (
                     <ul className="mt-6 space-y-3">
                         {requests.data.map((request) => (
                             <Card as="li" key={request.id}>
                                 <div className="flex items-center justify-between gap-4">
-                                    <Link href={`/requests/${request.id}`} className="font-medium text-blue-600 underline hover:text-blue-800">
+                                    <Link href={`/requests/${request.id}`} className="font-medium text-brand-600 underline hover:text-brand-700">
                                         {request.title}
                                     </Link>
                                     <Badge variant={REQUEST_STATUS_VARIANTS[request.status]}>{t(REQUEST_STATUS_KEYS[request.status])}</Badge>

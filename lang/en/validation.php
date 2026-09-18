@@ -46,4 +46,8 @@ return [
     'password' => [
         'min' => 'The :attribute field must be at least :min characters.',
     ],
+
+    'attributes' => [
+        'other_service_details' => 'other service details',
+    ],
 ];

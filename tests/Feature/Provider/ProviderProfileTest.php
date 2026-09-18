@@ -261,4 +261,127 @@ class ProviderProfileTest extends TestCase
                 ->where('profile.area_names', [$area->name])
         );
     }
+
+    public function test_other_service_details_is_required_when_other_category_is_selected(): void
+    {
+        $provider = User::factory()->provider()->create();
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $area = Area::factory()->create();
+
+        $response = $this->actingAs($provider)->post('/provider/profile', [
+            'business_name' => 'Da Nang Fixit Co.',
+            'category_ids' => [$other->id],
+            'area_ids' => [$area->id],
+        ]);
+
+        $response->assertInvalid(['other_service_details']);
+    }
+
+    public function test_whitespace_only_other_service_details_is_rejected_when_other_is_selected(): void
+    {
+        // Laravel's default global TrimStrings + ConvertEmptyStringsToNull
+        // middleware trims this to '' then converts it to null before
+        // validation runs, so 'required' correctly fails — no extra rule
+        // is needed to reject whitespace-only input.
+        $provider = User::factory()->provider()->create();
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $area = Area::factory()->create();
+
+        $response = $this->actingAs($provider)->post('/provider/profile', [
+            'business_name' => 'Da Nang Fixit Co.',
+            'category_ids' => [$other->id],
+            'area_ids' => [$area->id],
+            'other_service_details' => '   ',
+        ]);
+
+        $response->assertInvalid(['other_service_details']);
+    }
+
+    public function test_other_service_details_rejects_input_over_500_characters(): void
+    {
+        $provider = User::factory()->provider()->create();
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $area = Area::factory()->create();
+
+        $response = $this->actingAs($provider)->post('/provider/profile', [
+            'business_name' => 'Da Nang Fixit Co.',
+            'category_ids' => [$other->id],
+            'area_ids' => [$area->id],
+            'other_service_details' => str_repeat('a', 501),
+        ]);
+
+        $response->assertInvalid(['other_service_details']);
+    }
+
+    public function test_other_service_details_is_saved_when_other_category_is_selected(): void
+    {
+        $provider = User::factory()->provider()->create();
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $area = Area::factory()->create();
+
+        $this->actingAs($provider)->post('/provider/profile', [
+            'business_name' => 'Da Nang Fixit Co.',
+            'category_ids' => [$other->id],
+            'area_ids' => [$area->id],
+            'other_service_details' => 'Custom furniture assembly',
+        ])->assertRedirect(route('dashboard'));
+
+        $profile = ProviderProfile::query()->where('user_id', $provider->id)->firstOrFail();
+        $this->assertSame('Custom furniture assembly', $profile->other_service_details);
+    }
+
+    public function test_other_service_details_is_forced_to_null_when_other_category_is_not_selected(): void
+    {
+        // Submitted even though "other" isn't selected — the Action must
+        // ignore this value and force null, based on the validated
+        // category_ids rather than the field's mere presence.
+        $provider = User::factory()->provider()->create();
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+
+        $this->actingAs($provider)->post('/provider/profile', [
+            'business_name' => 'Da Nang Fixit Co.',
+            'category_ids' => [$category->id],
+            'area_ids' => [$area->id],
+            'other_service_details' => 'This should be ignored',
+        ])->assertRedirect(route('dashboard'));
+
+        $profile = ProviderProfile::query()->where('user_id', $provider->id)->firstOrFail();
+        $this->assertNull($profile->other_service_details);
+    }
+
+    public function test_show_response_includes_other_service_details_when_present(): void
+    {
+        $provider = User::factory()->provider()->create();
+        $profile = ProviderProfile::factory()->forUser($provider)->rejected()->create();
+        $profile->other_service_details = 'Custom carpentry work';
+        $profile->save();
+
+        $this->actingAs($provider)->get('/provider/profile')->assertInertia(
+            fn (Assert $page) => $page->where('profile.other_service_details', 'Custom carpentry work')
+        );
+    }
+
+    public function test_other_service_details_becomes_null_when_a_resubmission_deselects_the_other_category(): void
+    {
+        $provider = User::factory()->provider()->create();
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $newCategory = Category::factory()->create();
+        $area = Area::factory()->create();
+
+        $profile = ProviderProfile::factory()->forUser($provider)->rejected()->create();
+        $profile->other_service_details = 'Old other details';
+        $profile->save();
+        $profile->categories()->attach($other);
+        $profile->areas()->attach($area);
+
+        $response = $this->actingAs($provider)->post('/provider/profile', [
+            'business_name' => 'Da Nang Fixit Co.',
+            'category_ids' => [$newCategory->id],
+            'area_ids' => [$area->id],
+        ]);
+
+        $response->assertRedirect(route('dashboard'));
+        $this->assertNull($profile->fresh()->other_service_details);
+    }
 }

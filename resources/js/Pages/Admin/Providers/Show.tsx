@@ -20,6 +20,7 @@ interface ProviderDetail {
     verification_note: string | null;
     categories: string[];
     areas: string[];
+    other_service_details: string | null;
     applicant_name: string;
     applicant_email: string;
     applicant_phone: string | null;
@@ -117,6 +118,12 @@ export default function Show({ profile }: Props) {
                             <dt className="font-medium text-gray-700">{t('common.areas')}</dt>
                             <dd className="text-gray-800">{profile.areas.join(', ') || t('common.none')}</dd>
                         </div>
+                        {profile.other_service_details && (
+                            <div>
+                                <dt className="font-medium text-gray-700">{t('provider.profile.other_service_details_label')}</dt>
+                                <dd className="text-gray-800">{profile.other_service_details}</dd>
+                            </div>
+                        )}
                         <div>
                             <dt className="font-medium text-gray-700">{t('admin.providers.show.applicant')}</dt>
                             <dd className="text-gray-800">
@@ -164,7 +171,7 @@ export default function Show({ profile }: Props) {
                 )}
 
                 <p className="mt-6">
-                    <Link href="/admin/providers" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/admin/providers" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_list')}
                     </Link>
                 </p>

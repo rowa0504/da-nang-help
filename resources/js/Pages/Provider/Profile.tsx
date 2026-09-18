@@ -24,6 +24,7 @@ type ProfileForm = {
     bio: string;
     category_ids: number[];
     area_ids: number[];
+    other_service_details: string;
 };
 
 // Explicit, exhaustive correspondence table — a missing case here is a
@@ -97,6 +98,12 @@ function ReadOnlyStatus({ profile }: { profile: ProviderProfileData }) {
                             <dt className="font-medium text-gray-700">{t('common.areas')}</dt>
                             <dd className="text-gray-800">{profile.area_names.join(', ') || t('common.none')}</dd>
                         </div>
+                        {profile.other_service_details && (
+                            <div>
+                                <dt className="font-medium text-gray-700">{t('provider.profile.other_service_details_label')}</dt>
+                                <dd className="text-gray-800">{profile.other_service_details}</dd>
+                            </div>
+                        )}
                         <div>
                             <dt className="font-medium text-gray-700">{t('provider.profile.avg_rating')}</dt>
                             <dd className="text-gray-800">{profile.avg_rating} / 5</dd>
@@ -109,7 +116,7 @@ function ReadOnlyStatus({ profile }: { profile: ProviderProfileData }) {
                 </Card>
 
                 <p className="mt-6">
-                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/dashboard" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_dashboard')}
                     </Link>
                 </p>
@@ -125,6 +132,7 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
         bio: profile?.bio ?? '',
         category_ids: profile?.category_ids ?? [],
         area_ids: profile?.area_ids ?? [],
+        other_service_details: profile?.other_service_details ?? '',
     });
 
     function submit(e: FormEvent) {
@@ -136,6 +144,9 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
         const current = data[field];
         setData(field, current.includes(id) ? current.filter((existing) => existing !== id) : [...current, id]);
     }
+
+    const otherCategoryId = categories.find((category) => category.slug === 'other')?.id;
+    const isOtherCategorySelected = otherCategoryId !== undefined && data.category_ids.includes(otherCategoryId);
 
     return (
         <AppLayout>
@@ -167,6 +178,21 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
                         </div>
                         {errors.category_ids && <p className="mt-1 text-sm text-red-600">{errors.category_ids}</p>}
                     </fieldset>
+
+                    {isOtherCategorySelected && (
+                        <FormField
+                            label={t('provider.profile.other_service_details_label')}
+                            htmlFor="other_service_details"
+                            error={errors.other_service_details}
+                            hint={t('provider.profile.other_service_details_hint')}
+                        >
+                            <Textarea
+                                maxLength={500}
+                                value={data.other_service_details}
+                                onChange={(e) => setData('other_service_details', e.target.value)}
+                            />
+                        </FormField>
+                    )}
 
                     <fieldset className="border-0 p-0">
                         <legend className="block text-sm font-medium text-gray-700">{t('provider.profile.areas_legend')}</legend>

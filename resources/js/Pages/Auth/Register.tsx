@@ -6,6 +6,7 @@ import { FormField } from '@/Components/FormField';
 import { Input } from '@/Components/Input';
 import { Button } from '@/Components/Button';
 import { useTranslation } from '@/hooks/useTranslation';
+import { resolveInitialRole } from '@/lib/resolveInitialRole';
 
 type RegisterForm = {
     name: string;
@@ -24,7 +25,7 @@ export default function Register() {
         password: '',
         password_confirmation: '',
         phone: '',
-        role: 'customer',
+        role: resolveInitialRole(window.location.search),
     });
 
     function submit(e: FormEvent) {
@@ -50,7 +51,7 @@ export default function Register() {
                                 value="customer"
                                 checked={data.role === 'customer'}
                                 onChange={() => setData('role', 'customer')}
-                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-600"
                             />
                             {t('role.customer')}
                         </label>
@@ -61,7 +62,7 @@ export default function Register() {
                                 value="provider"
                                 checked={data.role === 'provider'}
                                 onChange={() => setData('role', 'provider')}
-                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-600"
                             />
                             {t('role.provider')}
                         </label>

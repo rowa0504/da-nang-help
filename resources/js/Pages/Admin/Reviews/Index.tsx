@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { Star } from 'lucide-react';
 import { AdminReviewData, PaginatedData } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
@@ -66,14 +67,20 @@ export default function Index({ reviews }: Props) {
                         columns={columns}
                         rows={reviews.data}
                         rowKey={(review) => review.id}
-                        emptyState={<EmptyState message={t('admin.reviews.index.empty')} />}
+                        emptyState={
+                            <EmptyState
+                                icon={<Star className="h-8 w-8" />}
+                                title={t('admin.reviews.index.empty')}
+                                description={t('admin.reviews.index.empty_description')}
+                            />
+                        }
                     />
                 </div>
 
                 <PaginationNav links={reviews.meta.links} />
 
                 <p className="mt-4">
-                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/dashboard" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_dashboard')}
                     </Link>
                 </p>

@@ -41,4 +41,8 @@ return [
     'password' => [
         'min' => ':attribute は :min 文字以上で入力してください。',
     ],
+
+    'attributes' => [
+        'other_service_details' => 'その他サービスの詳細',
+    ],
 ];

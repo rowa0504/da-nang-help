@@ -57,15 +57,18 @@ class CategoryModelTest extends TestCase
 
     public function test_category_slug_is_unique(): void
     {
-        Category::factory()->create(['slug' => 'plumbing']);
+        // A slug unrelated to the real launch categories (seeded by the
+        // 2026_09_16_000001 migration on every test run) — this test only
+        // cares about the unique constraint itself, not any specific slug.
+        Category::factory()->create(['slug' => 'test-unique-slug']);
 
         $this->expectException(QueryException::class);
-        Category::factory()->create(['slug' => 'plumbing']);
+        Category::factory()->create(['slug' => 'test-unique-slug']);
     }
 
     public function test_name_for_prefers_the_requested_locale(): void
     {
-        $category = Category::factory()->create(['slug' => 'aircon-repair']);
+        $category = Category::factory()->create(['slug' => 'test-name-for-locale']);
         CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Air conditioner repair']);
         CategoryTranslation::factory()->for($category)->create(['locale' => 'ja', 'name' => 'エアコン修理']);
         $category->load('translations');
@@ -75,7 +78,7 @@ class CategoryModelTest extends TestCase
 
     public function test_name_for_falls_back_to_english_when_the_requested_locale_is_missing(): void
     {
-        $category = Category::factory()->create(['slug' => 'plumbing']);
+        $category = Category::factory()->create(['slug' => 'test-name-for-fallback']);
         CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Plumbing']);
         $category->load('translations');
 

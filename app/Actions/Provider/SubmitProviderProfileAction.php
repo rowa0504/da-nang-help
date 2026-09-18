@@ -5,6 +5,7 @@ namespace App\Actions\Provider;
 use App\Enums\ProviderVerificationStatus;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidProviderVerificationTransitionException;
+use App\Models\Category;
 use App\Models\ProviderProfile;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ class SubmitProviderProfileAction
     /**
      * Create a new provider_profiles row, or resubmit a rejected one.
      *
-     * @param  array{business_name: string, bio: ?string, category_ids: array<int>, area_ids: array<int>}  $data
+     * @param  array{business_name: string, bio: ?string, category_ids: array<int>, area_ids: array<int>, other_service_details: ?string}  $data
      */
     public function handle(User $user, array $data): ProviderProfile
     {
@@ -54,6 +55,13 @@ class SubmitProviderProfileAction
             $profile->bio = $data['bio'] ?? null;
             $profile->verification_status = ProviderVerificationStatus::Pending;
             $profile->rejected_at = null;
+            // Never trust the submitted other_service_details value on its
+            // own: whether it is kept or forced to null is decided from the
+            // *validated* category_ids, not from whether the field itself
+            // was present in $data.
+            $profile->other_service_details = $this->isOtherCategorySelected($data['category_ids'])
+                ? $data['other_service_details']
+                : null;
             // verification_note is deliberately left untouched: on
             // resubmission it retains the previous rejection reason as
             // Admin-internal history until the next reject overwrites it.
@@ -64,5 +72,20 @@ class SubmitProviderProfileAction
 
             return $profile;
         });
+    }
+
+    /**
+     * @param  array<int>  $categoryIds
+     */
+    private function isOtherCategorySelected(array $categoryIds): bool
+    {
+        $otherCategoryId = Category::query()->where('slug', 'other')->value('id');
+        if ($otherCategoryId === null) {
+            return false;
+        }
+
+        $normalizedCategoryIds = array_map('intval', $categoryIds);
+
+        return in_array((int) $otherCategoryId, $normalizedCategoryIds, true);
     }
 }

@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['business_name', 'bio'])]
+#[Fillable(['business_name', 'bio', 'other_service_details'])]
 #[Hidden(['verification_note'])]
 #[UsePolicy(ProviderProfilePolicy::class)]
 class ProviderProfile extends Model

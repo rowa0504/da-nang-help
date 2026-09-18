@@ -187,11 +187,11 @@ export default function Show({ job }: Props) {
                 {job.status === 'completed' && <ReviewSection isCustomer={isCustomer} jobId={job.id} review={job.review} />}
 
                 <p className="mt-6">
-                    <Link href={`/requests/${job.service_request.id}`} className="text-blue-600 underline hover:text-blue-800">
+                    <Link href={`/requests/${job.service_request.id}`} className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_request')}
                     </Link>
                     {' · '}
-                    <Link href="/jobs" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/jobs" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.all_my_jobs')}
                     </Link>
                 </p>

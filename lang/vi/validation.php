@@ -41,4 +41,8 @@ return [
     'password' => [
         'min' => 'Trường :attribute phải có ít nhất :min ký tự.',
     ],
+
+    'attributes' => [
+        'other_service_details' => 'chi tiết dịch vụ khác',
+    ],
 ];

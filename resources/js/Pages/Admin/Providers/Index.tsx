@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { UserCheck } from 'lucide-react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
 import { DataTable, DataTableColumn } from '@/Components/DataTable';
@@ -38,7 +39,7 @@ export default function Index({ profiles }: Props) {
             key: 'action',
             header: '',
             render: (profile) => (
-                <Link href={`/admin/providers/${profile.id}`} className="text-blue-600 underline hover:text-blue-800">
+                <Link href={`/admin/providers/${profile.id}`} className="text-brand-600 underline hover:text-brand-700">
                     {t('common.review_action')}
                 </Link>
             ),
@@ -56,12 +57,18 @@ export default function Index({ profiles }: Props) {
                         columns={columns}
                         rows={profiles}
                         rowKey={(profile) => profile.id}
-                        emptyState={<EmptyState message={t('admin.providers.index.empty')} />}
+                        emptyState={
+                            <EmptyState
+                                icon={<UserCheck className="h-8 w-8" />}
+                                title={t('admin.providers.index.empty')}
+                                description={t('admin.providers.index.empty_description')}
+                            />
+                        }
                     />
                 </div>
 
                 <p className="mt-6">
-                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/dashboard" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_dashboard')}
                     </Link>
                 </p>

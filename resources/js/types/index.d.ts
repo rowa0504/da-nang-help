@@ -58,6 +58,7 @@ export interface ProviderProfileData {
     // an Admin later deactivates one (Phase 9).
     category_names: string[];
     area_names: string[];
+    other_service_details: string | null;
     avg_rating: string; // decimal cast string, kept as-is — never converted to number
     completed_jobs_count: number;
 }
@@ -127,7 +128,15 @@ export interface OfferData {
     available_at: string | null; // UTC ISO 8601
     status: OfferStatus;
     created_at: string;
-    provider: { id: number; business_name: string | null; avg_rating: string; completed_jobs_count: number };
+    provider: {
+        id: number;
+        business_name: string | null;
+        avg_rating: string;
+        completed_jobs_count: number;
+        // Only ever non-null when this Offer's own request's category is
+        // "other" — minimized server-side, not just hidden by the frontend.
+        other_service_details: string | null;
+    };
     // Present only for the offering Provider themself or an Admin.
     original_message?: string;
     source_locale?: string;

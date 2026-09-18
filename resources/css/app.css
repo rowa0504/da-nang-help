@@ -6,4 +6,15 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Brand palette (Phase 10A-2). Deliberately separate from the status
+       colors used by Badge/Alert (success/warning/danger/info/neutral) —
+       brand identity and status meaning are independent, so changing one
+       must never change the other. */
+    --color-brand-50: #F0FDFA;
+    --color-brand-100: #CCFBF1;
+    --color-brand-600: #0F766E;
+    --color-brand-700: #115E59;
+    --color-accent-500: #F97316;
+    --color-accent-600: #EA580C;
 }

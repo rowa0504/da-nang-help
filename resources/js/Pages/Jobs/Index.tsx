@@ -1,5 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
-import { JobData, JobStatus, PaginatedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { Briefcase } from 'lucide-react';
+import { JobData, JobStatus, PaginatedData, SharedProps } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
 import { Card } from '@/Components/Card';
@@ -35,6 +36,9 @@ const JOB_STATUS_VARIANTS: Record<JobStatus, BadgeVariant> = {
 export default function Index({ jobs }: Props) {
     const { t } = useTranslation();
     const { formatCurrency } = useLocaleFormat();
+    const { auth } = usePage<SharedProps>().props;
+    const emptyDescriptionKey =
+        auth.user?.role === 'provider' ? 'jobs.index.empty_description_provider' : 'jobs.index.empty_description_customer';
 
     return (
         <AppLayout>
@@ -43,7 +47,11 @@ export default function Index({ jobs }: Props) {
                 <PageHeader title={t('jobs.index.title')} />
 
                 {jobs.data.length === 0 ? (
-                    <EmptyState message={t('jobs.index.empty')} />
+                    <EmptyState
+                        icon={<Briefcase className="h-8 w-8" />}
+                        title={t('jobs.index.empty')}
+                        description={t(emptyDescriptionKey)}
+                    />
                 ) : (
                     <ul className="mt-6 space-y-3">
                         {jobs.data.map((job) => (
@@ -62,7 +70,7 @@ export default function Index({ jobs }: Props) {
                                     })}
                                 </p>
                                 <p className="mt-2">
-                                    <Link href={`/jobs/${job.id}`} className="text-blue-600 underline hover:text-blue-800">
+                                    <Link href={`/jobs/${job.id}`} className="text-brand-600 underline hover:text-brand-700">
                                         {t('jobs.view')}
                                     </Link>
                                 </p>

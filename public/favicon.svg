@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Da Nang Help symbol: a location pin (help is nearby), a house inside
+       it (home services), and a small wave beneath (Da Nang's coastline).
+       This is the single source of truth for the mark — public/favicon.svg,
+       favicon.ico, and apple-touch-icon.png are all generated from this
+       file by scripts/generate-favicons.mjs. Do not hand-edit those
+       generated files; edit this one and re-run the script. -->
+  <path
+    d="M32 58 C20 46 8 34 8 24 C8 12.7 18.7 4 32 4 C45.3 4 56 12.7 56 24 C56 34 44 46 32 58 Z"
+    fill="#0F766E"
+  />
+  <path d="M20 24 L32 14 L44 24 L44 34 L20 34 Z" fill="#FFFFFF" />
+  <path
+    d="M24 43 Q28 40 32 43 Q36 46 40 43"
+    stroke="#F97316"
+    stroke-width="2.2"
+    fill="none"
+    stroke-linecap="round"
+  />
+</svg>

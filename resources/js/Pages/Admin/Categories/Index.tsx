@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { Tags } from 'lucide-react';
 import { AdminCategoryData } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
@@ -33,7 +34,7 @@ export default function Index({ categories }: Props) {
             key: 'action',
             header: '',
             render: (category) => (
-                <Link href={`/admin/categories/${category.id}/edit`} className="text-blue-600 underline hover:text-blue-800">
+                <Link href={`/admin/categories/${category.id}/edit`} className="text-brand-600 underline hover:text-brand-700">
                     {t('common.edit')}
                 </Link>
             ),
@@ -47,7 +48,7 @@ export default function Index({ categories }: Props) {
                 <PageHeader
                     title={t('admin.categories.index.title')}
                     actions={
-                        <Link href="/admin/categories/create" className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                        <Link href="/admin/categories/create" className="rounded bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
                             {t('admin.categories.index.create')}
                         </Link>
                     }
@@ -58,12 +59,20 @@ export default function Index({ categories }: Props) {
                         columns={columns}
                         rows={categories}
                         rowKey={(category) => category.id}
-                        emptyState={<EmptyState message={t('admin.categories.index.empty')} />}
+                        emptyState={
+                            <EmptyState
+                                icon={<Tags className="h-8 w-8" />}
+                                title={t('admin.categories.index.empty')}
+                                description={t('admin.categories.index.empty_description')}
+                                actionLabel={t('admin.categories.index.create')}
+                                actionHref="/admin/categories/create"
+                            />
+                        }
                     />
                 </div>
 
                 <p className="mt-4">
-                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/dashboard" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_dashboard')}
                     </Link>
                 </p>

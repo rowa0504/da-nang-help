@@ -72,6 +72,8 @@ export default function Create({ categories, areas }: Props) {
         setData('photos', files);
     }
 
+    const isOtherCategorySelected = categories.some((category) => category.slug === 'other' && category.id === data.category_id);
+
     return (
         <AppLayout>
             <div className="mx-auto max-w-3xl p-4 sm:p-6">
@@ -79,8 +81,18 @@ export default function Create({ categories, areas }: Props) {
                 <PageHeader title={t('requests.create.heading')} />
 
                 <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
-                    <FormField label={t('common.title')} htmlFor="title" error={errors.title}>
-                        <Input type="text" value={data.title} onChange={(e) => setData('title', e.target.value)} />
+                    <FormField
+                        label={isOtherCategorySelected ? t('requests.create.other_title_label') : t('common.title')}
+                        htmlFor="title"
+                        error={errors.title}
+                        hint={isOtherCategorySelected ? t('requests.create.other_title_hint') : undefined}
+                    >
+                        <Input
+                            type="text"
+                            value={data.title}
+                            onChange={(e) => setData('title', e.target.value)}
+                            placeholder={isOtherCategorySelected ? t('requests.create.other_title_placeholder') : undefined}
+                        />
                     </FormField>
 
                     <FormField label={t('common.description')} htmlFor="description" error={errors.description}>
@@ -145,7 +157,7 @@ export default function Create({ categories, areas }: Props) {
                                 name="urgency"
                                 checked={data.urgency === 'normal'}
                                 onChange={() => setData('urgency', 'normal')}
-                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-600"
                             />
                             {t('status.urgency.normal')}
                         </label>
@@ -155,7 +167,7 @@ export default function Create({ categories, areas }: Props) {
                                 name="urgency"
                                 checked={data.urgency === 'urgent'}
                                 onChange={() => setData('urgency', 'urgent')}
-                                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 border-gray-300 text-brand-600 focus:ring-brand-600"
                             />
                             {t('status.urgency.urgent')}
                         </label>
@@ -203,7 +215,7 @@ export default function Create({ categories, areas }: Props) {
                 </form>
 
                 <p className="mt-4">
-                    <Link href="/requests" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/requests" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.view_my_requests')}
                     </Link>
                 </p>

@@ -6,14 +6,12 @@ use App\Models\Category;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds a small set of service categories for local development and
- * testing only.
+ * Seeds the launch category list for local development and testing.
  *
- * These are illustrative placeholders (drawn from the examples in
- * docs/BLUEPRINT.md's Provider persona list), NOT a decision about which
- * categories the real Da Nang launch will offer — that is still an open
- * question in the Blueprint ("20 未確定事項", item 1). Do not treat this
- * seeder's contents as production master data.
+ * This mirrors the production data applied by the
+ * `2026_09_16_000001_upsert_launch_categories` migration — this seeder is
+ * for local/testing environments only (production never runs seeders), so
+ * the two must be kept in sync by hand whenever the category list changes.
  *
  * Idempotent: safe to run repeatedly via updateOrCreate() on `slug` /
  * `(category_id, locale)`.
@@ -28,8 +26,17 @@ class CategorySeeder extends Seeder
 
         $categories = [
             [
-                'slug' => 'aircon-repair',
+                'slug' => 'motorbike-repair',
                 'sort_order' => 10,
+                'translations' => [
+                    'en' => 'Motorbike Repair',
+                    'ja' => 'バイク修理',
+                    'vi' => 'Sửa xe máy',
+                ],
+            ],
+            [
+                'slug' => 'aircon-repair',
+                'sort_order' => 20,
                 'translations' => [
                     'en' => 'Air-con Repair',
                     'ja' => 'エアコン修理',
@@ -37,8 +44,26 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
+                'slug' => 'cleaning',
+                'sort_order' => 30,
+                'translations' => [
+                    'en' => 'Cleaning',
+                    'ja' => '清掃',
+                    'vi' => 'Vệ sinh',
+                ],
+            ],
+            [
+                'slug' => 'education',
+                'sort_order' => 40,
+                'translations' => [
+                    'en' => 'Lessons & Tutoring',
+                    'ja' => '学習・家庭教師',
+                    'vi' => 'Gia sư & Học tập',
+                ],
+            ],
+            [
                 'slug' => 'plumbing',
-                'sort_order' => 20,
+                'sort_order' => 50,
                 'translations' => [
                     'en' => 'Plumbing',
                     'ja' => '水道修理',
@@ -47,7 +72,7 @@ class CategorySeeder extends Seeder
             ],
             [
                 'slug' => 'electrical-work',
-                'sort_order' => 30,
+                'sort_order' => 60,
                 'translations' => [
                     'en' => 'Electrical Work',
                     'ja' => '電気工事',
@@ -55,21 +80,21 @@ class CategorySeeder extends Seeder
                 ],
             ],
             [
-                'slug' => 'cleaning',
-                'sort_order' => 40,
-                'translations' => [
-                    'en' => 'Cleaning',
-                    'ja' => '清掃',
-                    'vi' => 'Dọn dẹp',
-                ],
-            ],
-            [
                 'slug' => 'moving',
-                'sort_order' => 50,
+                'sort_order' => 70,
                 'translations' => [
                     'en' => 'Moving',
                     'ja' => '引っ越し',
                     'vi' => 'Chuyển nhà',
+                ],
+            ],
+            [
+                'slug' => 'other',
+                'sort_order' => 80,
+                'translations' => [
+                    'en' => 'Other',
+                    'ja' => 'その他',
+                    'vi' => 'Khác',
                 ],
             ],
         ];

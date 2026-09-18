@@ -224,6 +224,44 @@ class OfferTest extends TestCase
         $this->actingAs($otherCustomer)->get("/requests/{$serviceRequest->id}/offers")->assertForbidden();
     }
 
+    public function test_offers_index_includes_other_service_details_when_request_category_is_other(): void
+    {
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $other->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($other, $area);
+        $provider->providerProfile->other_service_details = 'Custom furniture repair';
+        $provider->providerProfile->save();
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('serviceRequest.category_slug', 'other')
+                ->where('offers.data.0.provider.other_service_details', 'Custom furniture repair')
+        );
+    }
+
+    public function test_offers_index_hides_other_service_details_when_request_category_is_not_other(): void
+    {
+        // Minimized at the response stage (OfferResource), not just hidden
+        // by the frontend: this Provider does have other_service_details
+        // stored, but this Offer's request isn't under the "other"
+        // category, so the field must come back null.
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $provider->providerProfile->other_service_details = 'Should not appear here';
+        $provider->providerProfile->save();
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('serviceRequest.category_slug', $category->slug)
+                ->where('offers.data.0.provider.other_service_details', null)
+        );
+    }
+
     public function test_provider_can_edit_pending_offer_and_translations_reset_on_message_change(): void
     {
         Queue::fake();

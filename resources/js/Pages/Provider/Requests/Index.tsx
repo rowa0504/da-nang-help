@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { Search } from 'lucide-react';
 import { PaginatedData, ServiceRequestData, ServiceRequestUrgency } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
@@ -29,12 +30,18 @@ export default function Index({ requests }: Props) {
                 <PageHeader title={t('provider.requests.index.heading')} />
 
                 {requests.data.length === 0 ? (
-                    <EmptyState message={t('provider.requests.index.empty')} />
+                    <EmptyState
+                        icon={<Search className="h-8 w-8" />}
+                        title={t('provider.requests.index.empty')}
+                        description={t('provider.requests.index.empty_description')}
+                        actionLabel={t('provider.requests.index.edit_profile')}
+                        actionHref="/provider/profile"
+                    />
                 ) : (
                     <ul className="mt-6 space-y-3">
                         {requests.data.map((request) => (
                             <Card as="li" key={request.id}>
-                                <Link href={`/requests/${request.id}`} className="font-medium text-blue-600 underline hover:text-blue-800">
+                                <Link href={`/requests/${request.id}`} className="font-medium text-brand-600 underline hover:text-brand-700">
                                     {request.title}
                                 </Link>
                                 <p className="mt-1 text-sm text-gray-600">

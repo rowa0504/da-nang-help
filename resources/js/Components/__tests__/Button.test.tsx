@@ -28,4 +28,15 @@ describe('Button', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Save' }));
         expect(onClick).toHaveBeenCalledTimes(1);
     });
+
+    it('carries a minimum 44px touch target below the sm breakpoint, for both sizes', () => {
+        render(
+            <>
+                <Button size="default">Default</Button>
+                <Button size="compact">Compact</Button>
+            </>,
+        );
+        expect(screen.getByRole('button', { name: 'Default' }).className).toContain('min-h-11');
+        expect(screen.getByRole('button', { name: 'Compact' }).className).toContain('min-h-11');
+    });
 });

@@ -27,12 +27,21 @@ class OfferController extends Controller
         $this->authorize('viewAny', [Offer::class, $serviceRequest]);
 
         $offers = Offer::where('service_request_id', $serviceRequest->id)
-            ->with(['provider.providerProfile', 'translations'])
+            // 'serviceRequest.category' is eager loaded here (not just
+            // provider.providerProfile) so OfferResource can decide whether
+            // to include other_service_details without an N+1 — every
+            // Offer in this collection shares the same service_request_id,
+            // so this resolves to one extra query total, not one per Offer.
+            ->with(['provider.providerProfile', 'translations', 'serviceRequest.category'])
             ->latest()
             ->paginate(20);
 
         return Inertia::render('Requests/Offers/Index', [
-            'serviceRequest' => ['id' => $serviceRequest->id, 'title' => $serviceRequest->title],
+            'serviceRequest' => [
+                'id' => $serviceRequest->id,
+                'title' => $serviceRequest->title,
+                'category_slug' => $serviceRequest->category->slug,
+            ],
             'offers' => OfferResource::collection($offers)->response()->getData(true),
         ]);
     }

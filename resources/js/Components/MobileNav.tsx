@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
+import { LucideIcon } from 'lucide-react';
 import { AuthUser, UserRole } from '@/types';
 import { TranslationKey } from '@/lang/en';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -9,6 +10,7 @@ interface MobileNavItem {
     label: ReactNode;
     href: string;
     active: boolean;
+    icon?: LucideIcon;
 }
 
 interface MobileNavProps {
@@ -51,7 +53,7 @@ export function MobileNav({ items, authUser }: MobileNavProps) {
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
                 aria-label={t('nav.menu')}
-                className="rounded p-2 text-gray-700 hover:bg-gray-100"
+                className="flex h-11 w-11 items-center justify-center rounded text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
             >
                 <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -59,21 +61,28 @@ export function MobileNav({ items, authUser }: MobileNavProps) {
             </button>
 
             {open && (
-                <div className="absolute right-0 z-40 mt-2 w-56 rounded border border-gray-200 bg-white p-2 shadow-lg">
+                <div
+                    className="absolute right-0 z-40 mt-2 w-64 origin-top-right rounded border border-gray-200 bg-white p-2 shadow-lg
+                        transition-[opacity,transform] duration-150 motion-reduce:transition-none"
+                >
                     <nav className="flex flex-col gap-1 text-sm">
-                        {items.map((item) => (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={
-                                    item.active
-                                        ? 'rounded px-2 py-1.5 font-semibold text-blue-700'
-                                        : 'rounded px-2 py-1.5 text-gray-700 hover:bg-gray-50'
-                                }
-                            >
-                                {item.label}
-                            </Link>
-                        ))}
+                        {items.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={
+                                        item.active
+                                            ? 'flex min-h-11 items-center gap-3 rounded bg-brand-50 px-2 py-1.5 font-semibold text-brand-700'
+                                            : 'flex min-h-11 items-center gap-3 rounded px-2 py-1.5 text-gray-700 hover:bg-gray-50'
+                                    }
+                                >
+                                    {Icon && <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />}
+                                    {item.label}
+                                </Link>
+                            );
+                        })}
                     </nav>
 
                     <div className="mt-2 border-t border-gray-200 pt-2">
@@ -90,17 +99,23 @@ export function MobileNav({ items, authUser }: MobileNavProps) {
                                     href="/logout"
                                     method="post"
                                     as="button"
-                                    className="block w-full rounded px-2 py-1.5 text-left text-blue-600 underline"
+                                    className="flex min-h-11 w-full items-center rounded px-2 py-1.5 text-left text-brand-600 underline hover:text-brand-700"
                                 >
                                     {t('nav.logout')}
                                 </Link>
                             </>
                         ) : (
                             <>
-                                <Link href="/login" className="block rounded px-2 py-1.5 text-blue-600 underline">
+                                <Link
+                                    href="/login"
+                                    className="flex min-h-11 items-center rounded px-2 py-1.5 text-brand-600 underline hover:text-brand-700"
+                                >
                                     {t('nav.login')}
                                 </Link>
-                                <Link href="/register" className="block rounded px-2 py-1.5 text-blue-600 underline">
+                                <Link
+                                    href="/register"
+                                    className="flex min-h-11 items-center rounded px-2 py-1.5 text-brand-600 underline hover:text-brand-700"
+                                >
                                     {t('nav.register')}
                                 </Link>
                             </>

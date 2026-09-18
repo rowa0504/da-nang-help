@@ -59,6 +59,7 @@ class ProviderReviewController extends Controller
                 'verification_note' => $providerProfile->verification_note,
                 'categories' => $providerProfile->categories->map(fn ($category) => $category->nameFor(app()->getLocale())),
                 'areas' => $providerProfile->areas->pluck('name'),
+                'other_service_details' => $providerProfile->other_service_details,
                 'applicant_name' => $providerProfile->user->name,
                 'applicant_email' => $providerProfile->user->email,
                 'applicant_phone' => $providerProfile->user->phone,

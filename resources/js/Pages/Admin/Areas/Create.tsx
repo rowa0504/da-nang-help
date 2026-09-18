@@ -50,7 +50,7 @@ export default function Create() {
                 </form>
 
                 <p className="mt-4">
-                    <Link href="/admin/areas" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/admin/areas" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_areas')}
                     </Link>
                 </p>

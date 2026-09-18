@@ -159,7 +159,7 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
 
                 {auth.user?.role === 'customer' && (
                     <p className="mt-4">
-                        <Link href={`/requests/${request.id}/offers`} className="text-blue-600 underline hover:text-blue-800">
+                        <Link href={`/requests/${request.id}/offers`} className="text-brand-600 underline hover:text-brand-700">
                             {t('nav.view_offers')}
                         </Link>
                     </p>
@@ -171,14 +171,14 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
 
                 {job && (
                     <p className="mt-4">
-                        <Link href={`/jobs/${job.id}`} className="text-blue-600 underline hover:text-blue-800">
+                        <Link href={`/jobs/${job.id}`} className="text-brand-600 underline hover:text-brand-700">
                             {t('nav.view_job')}
                         </Link>
                     </p>
                 )}
 
                 <p className="mt-4">
-                    <Link href="/requests" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/requests" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_my_requests')}
                     </Link>
                 </p>

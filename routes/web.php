@@ -1,12 +1,10 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Home');
-});
+Route::get('/', HomeController::class)->name('home');
 
 Route::middleware('auth')->get('/dashboard', DashboardController::class)->name('dashboard');
 

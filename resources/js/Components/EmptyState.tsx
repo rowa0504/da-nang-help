@@ -1,25 +1,28 @@
 import { ReactNode } from 'react';
 import { Link } from '@inertiajs/react';
-import { Button } from '@/Components/Button';
+import { Button, buttonClasses } from '@/Components/Button';
 
 interface EmptyStateProps {
-    message: ReactNode;
+    icon?: ReactNode;
+    title: ReactNode;
+    description?: ReactNode;
     actionLabel?: ReactNode;
     actionHref?: string;
     onAction?: () => void;
+    // Explains why no action is offered here (e.g. a permission the
+    // current viewer doesn't have), rather than leaving an empty list with
+    // no next step at all.
+    note?: ReactNode;
 }
 
-// A Link's <a> cannot contain a <button> without creating two nested
-// focusable/interactive elements, so a link-triggered action is styled
-// directly rather than wrapping the Button component.
-const LINK_BUTTON_CLASSES = 'inline-flex rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700';
-
-export function EmptyState({ message, actionLabel, actionHref, onAction }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, actionLabel, actionHref, onAction, note }: EmptyStateProps) {
     return (
         <div className="rounded border border-dashed border-gray-300 p-8 text-center">
-            <p className="text-gray-600">{message}</p>
+            {icon && <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center text-gray-400">{icon}</div>}
+            <p className="font-medium text-gray-900">{title}</p>
+            {description && <p className="mt-1 text-sm text-gray-600">{description}</p>}
             {actionLabel && actionHref && (
-                <Link href={actionHref} className={`mt-4 ${LINK_BUTTON_CLASSES}`}>
+                <Link href={actionHref} className={`mt-4 ${buttonClasses('primary', 'compact')}`}>
                     {actionLabel}
                 </Link>
             )}
@@ -28,6 +31,7 @@ export function EmptyState({ message, actionLabel, actionHref, onAction }: Empty
                     {actionLabel}
                 </Button>
             )}
+            {note && <p className="mt-3 text-xs text-gray-500">{note}</p>}
         </div>
     );
 }

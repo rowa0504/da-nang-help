@@ -41,6 +41,7 @@ class ProviderProfileController extends Controller
                 'area_ids' => $profile->areas->pluck('id'),
                 'category_names' => $profile->categories->map(fn (Category $category) => $category->nameFor(app()->getLocale())),
                 'area_names' => $profile->areas->pluck('name'),
+                'other_service_details' => $profile->other_service_details,
                 'avg_rating' => $profile->avg_rating,
                 'completed_jobs_count' => $profile->completed_jobs_count,
             ] : null,

@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { ClipboardList } from 'lucide-react';
 import { AdminServiceRequestData, PaginatedData, ServiceRequestModerationStatus, ServiceRequestStatus } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
@@ -95,14 +96,20 @@ export default function Index({ requests }: Props) {
                         columns={columns}
                         rows={requests.data}
                         rowKey={(request) => request.id}
-                        emptyState={<EmptyState message={t('admin.requests.index.empty')} />}
+                        emptyState={
+                            <EmptyState
+                                icon={<ClipboardList className="h-8 w-8" />}
+                                title={t('admin.requests.index.empty')}
+                                description={t('admin.requests.index.empty_description')}
+                            />
+                        }
                     />
                 </div>
 
                 <PaginationNav links={requests.meta.links} />
 
                 <p className="mt-4">
-                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/dashboard" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_dashboard')}
                     </Link>
                 </p>

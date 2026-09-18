@@ -9,7 +9,7 @@ interface PageLink {
     active: boolean;
 }
 
-const linkClass = 'text-blue-600 underline hover:text-blue-800';
+const linkClass = 'text-brand-600 underline hover:text-brand-700';
 
 // Laravel's paginator emits exactly these two literal, HTML-entity-encoded
 // labels for the prev/next links; every other label is a bare page number

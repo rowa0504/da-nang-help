@@ -23,6 +23,11 @@ class OfferResource extends JsonResource
         $viewerLocale = $viewer->locale ?? 'en';
         $isMessageTranslated = $viewerLocale !== $this->source_locale
             && $this->translations->firstWhere('locale', $viewerLocale)?->translation_status === TranslationStatus::Completed;
+        // Minimized at the response stage, not just hidden by the frontend:
+        // a Provider's other_service_details is only relevant (and only
+        // sent to the client) when this Offer's own request was posted
+        // under the "other" category.
+        $isOtherCategoryRequest = $this->serviceRequest->category->slug === 'other';
 
         return [
             'id' => $this->id,
@@ -42,6 +47,7 @@ class OfferResource extends JsonResource
                 'business_name' => $this->provider->providerProfile?->business_name,
                 'avg_rating' => $this->provider->providerProfile?->avg_rating ?? '0.00',
                 'completed_jobs_count' => $this->provider->providerProfile?->completed_jobs_count ?? 0,
+                'other_service_details' => $isOtherCategoryRequest ? $this->provider->providerProfile?->other_service_details : null,
             ],
             ...$isOwnerOrAdmin ? [
                 'original_message' => $this->message,

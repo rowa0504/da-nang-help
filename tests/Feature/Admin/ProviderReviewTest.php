@@ -139,10 +139,35 @@ class ProviderReviewTest extends TestCase
         );
     }
 
+    public function test_admin_detail_response_includes_other_service_details_when_present(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $profile = ProviderProfile::factory()->create();
+        $profile->other_service_details = 'Custom carpentry work';
+        $profile->save();
+
+        $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertInertia(
+            fn (Assert $page) => $page->where('profile.other_service_details', 'Custom carpentry work')
+        );
+    }
+
+    public function test_admin_detail_response_has_null_other_service_details_when_absent(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $profile = ProviderProfile::factory()->create();
+
+        $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertInertia(
+            fn (Assert $page) => $page->where('profile.other_service_details', null)
+        );
+    }
+
     public function test_provider_detail_category_names_resolve_to_the_viewers_locale(): void
     {
         $admin = User::factory()->admin()->create();
-        $category = Category::factory()->create(['slug' => 'aircon-repair']);
+        // A slug unrelated to the real launch categories (seeded by the
+        // 2026_09_16_000001 migration on every test run) — this test only
+        // cares about locale resolution, not any specific real category.
+        $category = Category::factory()->create(['slug' => 'test-provider-detail-category']);
         CategoryTranslation::factory()->for($category)->create(['locale' => 'en', 'name' => 'Air-con Repair']);
         CategoryTranslation::factory()->for($category)->create(['locale' => 'ja', 'name' => 'エアコン修理']);
         CategoryTranslation::factory()->for($category)->create(['locale' => 'vi', 'name' => 'Sửa điều hòa']);

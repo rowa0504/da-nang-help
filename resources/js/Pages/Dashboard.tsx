@@ -113,7 +113,7 @@ function ProviderStatus({ status }: { status?: ProviderVerificationStatus | null
             <Card className="mt-6">
                 <p className="text-sm text-gray-700">
                     {t('dashboard.provider_status.none')}{' '}
-                    <Link href="/provider/profile" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/provider/profile" className="text-brand-600 underline hover:text-brand-700">
                         {t('dashboard.provider_status.setup_link')}
                     </Link>
                 </p>
@@ -131,7 +131,7 @@ function ProviderStatus({ status }: { status?: ProviderVerificationStatus | null
                 {actionKey && (
                     <>
                         {' '}
-                        <Link href="/provider/profile" className="text-blue-600 underline hover:text-blue-800">
+                        <Link href="/provider/profile" className="text-brand-600 underline hover:text-brand-700">
                             {t(actionKey)}
                         </Link>
                     </>

@@ -13,9 +13,10 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useLocaleFormat } from '@/hooks/useLocaleFormat';
 import { useConfirm } from '@/hooks/useConfirm';
 import { TranslationKey } from '@/lang/en';
+import { Inbox } from 'lucide-react';
 
 interface Props {
-    serviceRequest: { id: number; title: string };
+    serviceRequest: { id: number; title: string; category_slug: string };
     offers: PaginatedData<OfferData>;
 }
 
@@ -71,14 +72,18 @@ export default function Index({ serviceRequest, offers }: Props) {
                 <PageHeader
                     title={t('offers.index.heading', { title: serviceRequest.title })}
                     actions={
-                        <Link href={`/requests/${serviceRequest.id}`} className="text-blue-600 underline hover:text-blue-800">
+                        <Link href={`/requests/${serviceRequest.id}`} className="text-brand-600 underline hover:text-brand-700">
                             {t('nav.back_to_request')}
                         </Link>
                     }
                 />
 
                 {offers.data.length === 0 ? (
-                    <EmptyState message={t('offers.index.empty')} />
+                    <EmptyState
+                        icon={<Inbox className="h-8 w-8" />}
+                        title={t('offers.index.empty')}
+                        description={t('offers.index.empty_description')}
+                    />
                 ) : (
                     <ul className="mt-6 space-y-3">
                         {offers.data.map((offer) => (
@@ -102,6 +107,12 @@ export default function Index({ serviceRequest, offers }: Props) {
                                         count: offer.provider.completed_jobs_count,
                                     })}
                                 </p>
+                                {serviceRequest.category_slug === 'other' && offer.provider.other_service_details && (
+                                    <p className="mt-1 text-sm text-gray-600">
+                                        <span className="font-medium">{t('provider.profile.other_service_details_label')}: </span>
+                                        {offer.provider.other_service_details}
+                                    </p>
+                                )}
 
                                 {offer.status === 'pending' && (
                                     <div className="mt-3 flex gap-2">

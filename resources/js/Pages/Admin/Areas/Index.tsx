@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { MapPin } from 'lucide-react';
 import { AdminAreaData } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
@@ -26,7 +27,7 @@ export default function Index({ areas }: Props) {
             key: 'action',
             header: '',
             render: (area) => (
-                <Link href={`/admin/areas/${area.id}/edit`} className="text-blue-600 underline hover:text-blue-800">
+                <Link href={`/admin/areas/${area.id}/edit`} className="text-brand-600 underline hover:text-brand-700">
                     {t('common.edit')}
                 </Link>
             ),
@@ -40,7 +41,7 @@ export default function Index({ areas }: Props) {
                 <PageHeader
                     title={t('admin.areas.index.title')}
                     actions={
-                        <Link href="/admin/areas/create" className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
+                        <Link href="/admin/areas/create" className="rounded bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
                             {t('admin.areas.index.create')}
                         </Link>
                     }
@@ -51,12 +52,20 @@ export default function Index({ areas }: Props) {
                         columns={columns}
                         rows={areas}
                         rowKey={(area) => area.id}
-                        emptyState={<EmptyState message={t('admin.areas.index.empty')} />}
+                        emptyState={
+                            <EmptyState
+                                icon={<MapPin className="h-8 w-8" />}
+                                title={t('admin.areas.index.empty')}
+                                description={t('admin.areas.index.empty_description')}
+                                actionLabel={t('admin.areas.index.create')}
+                                actionHref="/admin/areas/create"
+                            />
+                        }
                     />
                 </div>
 
                 <p className="mt-4">
-                    <Link href="/dashboard" className="text-blue-600 underline hover:text-blue-800">
+                    <Link href="/dashboard" className="text-brand-600 underline hover:text-brand-700">
                         {t('nav.back_to_dashboard')}
                     </Link>
                 </p>

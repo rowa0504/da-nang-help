@@ -10,20 +10,35 @@ interface ButtonProps extends ComponentPropsWithoutRef<'button'> {
 }
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700',
+    primary: 'bg-brand-600 text-white hover:bg-brand-700',
     secondary: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
     danger: 'bg-red-600 text-white hover:bg-red-700',
     success: 'bg-green-600 text-white hover:bg-green-700',
-    link: 'text-blue-600 underline hover:text-blue-800',
+    link: 'text-brand-600 underline hover:text-brand-700',
 };
 
+// min-h-11 (44px) guarantees a touch-friendly tap target on mobile; above
+// the sm breakpoint the button is free to size to its content again.
 const SIZE_CLASSES: Record<ButtonVariant, Record<ButtonSize, string>> = {
-    primary: { default: 'rounded px-4 py-2', compact: 'rounded px-3 py-1.5 text-sm' },
-    secondary: { default: 'rounded px-4 py-2', compact: 'rounded px-3 py-1.5 text-sm' },
-    danger: { default: 'rounded px-4 py-2', compact: 'rounded px-3 py-1.5 text-sm' },
-    success: { default: 'rounded px-4 py-2', compact: 'rounded px-3 py-1.5 text-sm' },
+    primary: { default: 'rounded px-4 py-2 min-h-11 sm:min-h-0', compact: 'rounded px-3 py-1.5 text-sm min-h-11 sm:min-h-0' },
+    secondary: { default: 'rounded px-4 py-2 min-h-11 sm:min-h-0', compact: 'rounded px-3 py-1.5 text-sm min-h-11 sm:min-h-0' },
+    danger: { default: 'rounded px-4 py-2 min-h-11 sm:min-h-0', compact: 'rounded px-3 py-1.5 text-sm min-h-11 sm:min-h-0' },
+    success: { default: 'rounded px-4 py-2 min-h-11 sm:min-h-0', compact: 'rounded px-3 py-1.5 text-sm min-h-11 sm:min-h-0' },
     link: { default: '', compact: 'text-sm' },
 };
+
+const BASE_CLASSES =
+    'inline-flex items-center justify-center gap-2 font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50';
+
+// Shared by <Button> and by any Inertia <Link> that needs to *look* like a
+// button — a <Link> renders an <a>, which can't contain a real <button>
+// (two nested focusable/interactive elements), so those call sites apply
+// these classes directly to the <a> instead of wrapping <Button>. This is
+// the single source of truth for button styling either way — no page
+// should hand-roll its own button class string.
+export function buttonClasses(variant: ButtonVariant = 'primary', size: ButtonSize = 'default', className = ''): string {
+    return [BASE_CLASSES, VARIANT_CLASSES[variant], SIZE_CLASSES[variant][size], className].filter(Boolean).join(' ');
+}
 
 // Spinner is a plain SVG (no icon library) so it works entirely offline
 // and doesn't add a dependency for a single glyph.
@@ -37,17 +52,8 @@ function Spinner() {
 }
 
 export function Button({ variant = 'primary', size = 'default', loading = false, disabled, className = '', children, ...rest }: ButtonProps) {
-    const classes = [
-        'inline-flex items-center justify-center gap-2 font-medium disabled:cursor-not-allowed disabled:opacity-50',
-        VARIANT_CLASSES[variant],
-        SIZE_CLASSES[variant][size],
-        className,
-    ]
-        .filter(Boolean)
-        .join(' ');
-
     return (
-        <button className={classes} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>
+        <button className={buttonClasses(variant, size, className)} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>
             {loading && <Spinner />}
             {children}
         </button>

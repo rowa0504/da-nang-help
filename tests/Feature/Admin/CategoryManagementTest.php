@@ -27,6 +27,18 @@ class CategoryManagementTest extends TestCase
         ], $overrides);
     }
 
+    /**
+     * RefreshDatabase already ran the 2026_09_16_000001 data migration,
+     * which seeds the real 7 launch categories on every test run — tests
+     * that assert an exact list order/position need a clean slate first,
+     * or the real rows (and their sort_order values) shift the positions
+     * this test cares about. Deleting cascades to category_translations.
+     */
+    private function clearLaunchCategories(): void
+    {
+        Category::query()->delete();
+    }
+
     public function test_customer_and_provider_are_forbidden_from_all_routes(): void
     {
         $customer = User::factory()->create();
@@ -180,6 +192,7 @@ class CategoryManagementTest extends TestCase
 
     public function test_category_list_orders_children_immediately_after_their_parent(): void
     {
+        $this->clearLaunchCategories();
         $admin = User::factory()->admin()->create();
         // A (root, sort_order=5) has child B (sort_order=1, lower than
         // both roots); C (root, sort_order=10). A naive sort_order-only
@@ -201,6 +214,7 @@ class CategoryManagementTest extends TestCase
 
     public function test_category_list_ties_within_a_level_are_broken_by_id(): void
     {
+        $this->clearLaunchCategories();
         $admin = User::factory()->admin()->create();
         $first = Category::factory()->create(['sort_order' => 1]);
         $second = Category::factory()->create(['sort_order' => 1]);

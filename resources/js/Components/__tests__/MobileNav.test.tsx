@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { LayoutDashboard } from 'lucide-react';
 import { MobileNav } from '@/Components/MobileNav';
 
 let navigateCallback: (() => void) | null = null;
@@ -26,7 +27,7 @@ vi.mock('@inertiajs/react', () => ({
 }));
 
 const items = [
-    { label: 'Dashboard', href: '/dashboard', active: true },
+    { label: 'Dashboard', href: '/dashboard', active: true, icon: LayoutDashboard },
     { label: 'My requests', href: '/requests', active: false },
 ];
 
@@ -66,5 +67,22 @@ describe('MobileNav', () => {
 
         await userEvent.click(screen.getByRole('button', { name: 'Outside' }));
         expect(screen.queryByRole('link', { name: 'Dashboard' })).not.toBeInTheDocument();
+    });
+
+    it('renders an icon next to an item that has one', async () => {
+        render(<MobileNav items={items} authUser={null} />);
+        await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+        const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
+        expect(dashboardLink.querySelector('svg')).not.toBeNull();
+        // "My requests" has no `icon`, so its link renders no <svg> at all.
+        const myRequestsLink = screen.getByRole('link', { name: 'My requests' });
+        expect(myRequestsLink.querySelector('svg')).toBeNull();
+    });
+
+    it('carries the motion-reduce transition class on the open menu panel (jsdom cannot evaluate prefers-reduced-motion itself — this only checks the class is present, not that motion is actually suppressed)', async () => {
+        render(<MobileNav items={items} authUser={null} />);
+        await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+        const panel = screen.getByRole('link', { name: 'Dashboard' }).closest('div');
+        expect(panel?.className).toContain('motion-reduce:transition-none');
     });
 });

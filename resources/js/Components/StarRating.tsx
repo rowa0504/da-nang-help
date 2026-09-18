@@ -96,7 +96,7 @@ export function StarRating({
                     tabIndex={value === n ? 0 : -1}
                     onClick={() => select(n)}
                     onKeyDown={handleKeyDown}
-                    className={`${sizeClass} rounded leading-none text-yellow-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
+                    className={`${sizeClass} flex min-h-11 min-w-11 items-center justify-center rounded leading-none text-yellow-500 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:ring-offset-1 sm:min-h-0 sm:min-w-0`}
                 >
                     {n <= value ? '★' : '☆'}
                 </button>
