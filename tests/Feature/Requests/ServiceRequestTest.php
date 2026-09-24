@@ -63,8 +63,6 @@ class ServiceRequestTest extends TestCase
             'category_id' => $category->id,
             'area_id' => $area->id,
             'address_text' => '123 Example Street',
-            'lat' => 16.05,
-            'lng' => 108.2,
             'urgency' => 'normal',
             'source_locale' => 'en',
         ], $overrides);
@@ -112,22 +110,11 @@ class ServiceRequestTest extends TestCase
             'category_id' => '',
             'area_id' => '',
             'address_text' => '',
-            'lat' => '',
-            'lng' => '',
             'urgency' => '',
             'source_locale' => '',
         ]);
 
-        $response->assertInvalid(['title', 'description', 'category_id', 'area_id', 'address_text', 'lat', 'lng', 'urgency', 'source_locale']);
-    }
-
-    public function test_lat_and_lng_out_of_range_are_rejected(): void
-    {
-        $customer = User::factory()->create();
-
-        $response = $this->actingAs($customer)->post('/requests', $this->payload(['lat' => 91, 'lng' => 181]));
-
-        $response->assertInvalid(['lat', 'lng']);
+        $response->assertInvalid(['title', 'description', 'category_id', 'area_id', 'address_text', 'urgency', 'source_locale']);
     }
 
     public function test_address_text_at_500_characters_succeeds_and_is_not_truncated(): void
@@ -215,16 +202,30 @@ class ServiceRequestTest extends TestCase
         );
     }
 
-    public function test_lat_and_lng_are_returned_as_numbers_not_strings(): void
+    public function test_a_newly_created_request_has_null_coordinates_not_zero(): void
     {
+        // Customers no longer submit lat/lng, and the Resource must not
+        // (float) 0.0 them just because the column allows null — that would
+        // silently render as "0, 0" (a real place) instead of "not yet
+        // geocoded".
         $customer = User::factory()->create();
-        $createResponse = $this->actingAs($customer)->post('/requests', $this->payload(['lat' => 16.05, 'lng' => 108.2]));
+        $createResponse = $this->actingAs($customer)->post('/requests', $this->payload());
         $location = $createResponse->headers->get('Location');
 
-        $this->actingAs($customer)->get($location)->assertInertia(function (Assert $page) {
-            $page->where('request.lat', fn ($lat) => is_float($lat) || is_int($lat))
-                ->where('request.lng', fn ($lng) => is_float($lng) || is_int($lng));
-        });
+        $this->actingAs($customer)->get($location)->assertInertia(
+            fn (Assert $page) => $page->where('request.lat', null)->where('request.lng', null)
+        );
+    }
+
+    public function test_lat_and_lng_are_returned_as_numbers_not_strings_when_present(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->withCoordinates()->create();
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('request.lat', fn ($lat) => is_float($lat) || is_int($lat))
+                ->where('request.lng', fn ($lng) => is_float($lng) || is_int($lng))
+        );
     }
 
     public function test_creation_dispatches_translation_jobs_and_creates_pending_rows(): void
@@ -398,8 +399,6 @@ class ServiceRequestTest extends TestCase
             'category_id' => $category->id,
             'area_id' => $area->id,
             'address_text' => 'x',
-            'lat' => 0,
-            'lng' => 0,
             'urgency' => 'normal',
             'source_locale' => 'en',
         ], []);
@@ -421,8 +420,6 @@ class ServiceRequestTest extends TestCase
                 'category_id' => 999_999, // does not exist -> FK constraint violation inside the transaction
                 'area_id' => $area->id,
                 'address_text' => '123 Example Street',
-                'lat' => 16.05,
-                'lng' => 108.2,
                 'urgency' => 'normal',
                 'source_locale' => 'en',
             ], [$this->realJpegFile()]);
@@ -461,8 +458,6 @@ class ServiceRequestTest extends TestCase
                 'category_id' => 999_999,
                 'area_id' => $area->id,
                 'address_text' => '123 Example Street',
-                'lat' => 16.05,
-                'lng' => 108.2,
                 'urgency' => 'normal',
                 'source_locale' => 'en',
             ], [$this->realJpegFile()]);

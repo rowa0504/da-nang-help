@@ -24,7 +24,7 @@ class CreateServiceRequestAction
     ) {}
 
     /**
-     * @param  array{title: string, description: string, category_id: int, area_id: int, address_text: string, lat: float, lng: float, urgency: string, source_locale: string}  $data
+     * @param  array{title: string, description: string, category_id: int, area_id: int, address_text: string, urgency: string, source_locale: string}  $data
      * @param  array<int, \Illuminate\Http\UploadedFile>  $photoFiles
      */
     public function handle(User $customer, array $data, array $photoFiles): CreateServiceRequestResult

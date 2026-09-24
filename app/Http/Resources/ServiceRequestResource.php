@@ -66,8 +66,8 @@ class ServiceRequestResource extends JsonResource
             ]),
             ...$canSeePrivate ? [
                 'address_text' => $this->address_text,
-                'lat' => (float) $this->lat,
-                'lng' => (float) $this->lng,
+                'lat' => $this->lat !== null ? (float) $this->lat : null,
+                'lng' => $this->lng !== null ? (float) $this->lng : null,
                 'customer' => [
                     'name' => $this->customer->name,
                     'email' => $this->customer->email,

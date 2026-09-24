@@ -21,8 +21,6 @@ class CreateServiceRequestRequest extends FormRequest
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn ($query) => $query->where('is_active', true))],
             'area_id' => ['required', 'integer', Rule::exists('areas', 'id')->where(fn ($query) => $query->where('is_active', true))],
             'address_text' => ['required', 'string', 'max:500'],
-            'lat' => ['required', 'numeric', 'between:-90,90'],
-            'lng' => ['required', 'numeric', 'between:-180,180'],
             'urgency' => ['required', Rule::in(['normal', 'urgent'])],
             'source_locale' => ['required', Rule::in(['en', 'ja', 'vi'])],
             'photos' => ['nullable', 'array', 'max:5'],

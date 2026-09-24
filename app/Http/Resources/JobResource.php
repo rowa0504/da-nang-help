@@ -42,8 +42,8 @@ class JobResource extends JsonResource
                 'id' => $this->serviceRequest->id,
                 'title' => $this->serviceRequest->title,
                 'address_text' => $this->serviceRequest->address_text,
-                'lat' => (float) $this->serviceRequest->lat,
-                'lng' => (float) $this->serviceRequest->lng,
+                'lat' => $this->serviceRequest->lat !== null ? (float) $this->serviceRequest->lat : null,
+                'lng' => $this->serviceRequest->lng !== null ? (float) $this->serviceRequest->lng : null,
             ],
             'customer' => [
                 'name' => $this->customer->name,

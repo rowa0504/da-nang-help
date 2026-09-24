@@ -46,4 +46,12 @@ describe('Requests/Create', () => {
 
         expect(screen.getByLabelText('Title')).toBeInTheDocument();
     });
+
+    it('has an address field but no latitude/longitude inputs', () => {
+        render(<Create categories={categories} areas={areas} />);
+
+        expect(screen.getByLabelText('Address')).toBeInTheDocument();
+        expect(screen.queryByLabelText(/latitude/i)).not.toBeInTheDocument();
+        expect(screen.queryByLabelText(/longitude/i)).not.toBeInTheDocument();
+    });
 });

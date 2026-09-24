@@ -24,8 +24,8 @@ class ServiceRequestFactory extends Factory
             'description' => fake()->paragraph(),
             'source_locale' => 'en',
             'address_text' => fake()->address(),
-            'lat' => fake()->latitude(-90, 90),
-            'lng' => fake()->longitude(-180, 180),
+            'lat' => null,
+            'lng' => null,
             'urgency' => 'normal',
         ];
     }
@@ -66,6 +66,20 @@ class ServiceRequestFactory extends Factory
     public function forCustomer(User $customer): static
     {
         return $this->for($customer, 'customer');
+    }
+
+    /**
+     * Coordinates are null by default (Customers no longer submit them —
+     * they're reserved for a future Google Maps integration). Use this state
+     * when a test specifically needs a request that already has them, e.g.
+     * to exercise the numeric-cast/serialization path.
+     */
+    public function withCoordinates(): static
+    {
+        return $this->state(fn () => [
+            'lat' => fake()->latitude(-90, 90),
+            'lng' => fake()->longitude(-180, 180),
+        ]);
     }
 
     public function cancelled(): static

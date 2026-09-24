@@ -21,8 +21,6 @@ type CreateForm = {
     category_id: number | '';
     area_id: number | '';
     address_text: string;
-    lat: string;
-    lng: string;
     urgency: 'normal' | 'urgent';
     source_locale: SupportedLocale;
     photos: File[];
@@ -52,8 +50,6 @@ export default function Create({ categories, areas }: Props) {
         category_id: '',
         area_id: '',
         address_text: '',
-        lat: '',
-        lng: '',
         urgency: 'normal',
         source_locale: defaultLocale,
         photos: [],
@@ -123,30 +119,6 @@ export default function Create({ categories, areas }: Props) {
 
                     <FormField label={t('common.address')} htmlFor="address_text" error={errors.address_text}>
                         <Input type="text" value={data.address_text} onChange={(e) => setData('address_text', e.target.value)} />
-                    </FormField>
-
-                    <FormField label={t('requests.create.latitude')} htmlFor="lat" error={errors.lat}>
-                        <Input
-                            type="number"
-                            inputMode="decimal"
-                            step="0.0000001"
-                            min="-90"
-                            max="90"
-                            value={data.lat}
-                            onChange={(e) => setData('lat', e.target.value)}
-                        />
-                    </FormField>
-
-                    <FormField label={t('requests.create.longitude')} htmlFor="lng" error={errors.lng}>
-                        <Input
-                            type="number"
-                            inputMode="decimal"
-                            step="0.0000001"
-                            min="-180"
-                            max="180"
-                            value={data.lng}
-                            onChange={(e) => setData('lng', e.target.value)}
-                        />
                     </FormField>
 
                     <fieldset className="border-0 p-0">

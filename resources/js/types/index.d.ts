@@ -88,8 +88,10 @@ export interface ServiceRequestData {
     // whatever fields happen to be present (this is a display convenience,
     // not a security boundary; see Dashboard.tsx for the same note).
     address_text?: string;
-    lat?: number;
-    lng?: number;
+    // Reserved for a future Google Maps integration — null until a request
+    // has been geocoded (Customers no longer submit coordinates directly).
+    lat?: number | null;
+    lng?: number | null;
     customer?: { name: string; email: string; phone: string | null };
 }
 
@@ -158,7 +160,7 @@ export interface JobData {
     // Only reachable once JobPolicy::view() has confirmed the viewer is this
     // job's Customer, its Provider, or an Admin — see JobResource, and the
     // same note on ServiceRequestData above.
-    service_request: { id: number; title: string; address_text: string; lat: number; lng: number };
+    service_request: { id: number; title: string; address_text: string; lat: number | null; lng: number | null };
     customer: { name: string; phone: string | null };
     provider: { name: string; phone: string | null; business_name: string | null };
     // null if no review yet, or if a hidden review is being withheld from

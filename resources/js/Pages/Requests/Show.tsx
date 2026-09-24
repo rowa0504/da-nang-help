@@ -131,12 +131,6 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
                                     <dt className="font-medium text-gray-700">{t('common.address')}</dt>
                                     <dd className="text-gray-800">{request.address_text}</dd>
                                 </div>
-                                <div>
-                                    <dt className="font-medium text-gray-700">{t('requests.show.coordinates')}</dt>
-                                    <dd className="text-gray-800">
-                                        {request.lat}, {request.lng}
-                                    </dd>
-                                </div>
                                 {request.customer && (
                                     <div>
                                         <dt className="font-medium text-gray-700">{t('common.customer')}</dt>
