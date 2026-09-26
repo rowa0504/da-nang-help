@@ -121,6 +121,16 @@ class ServiceRequestController extends Controller
                 ->first();
             $myOffer = $offer ? (new OfferResource($offer))->resolve($request) : null;
             $canOffer = $myOffer === null && $request->user()->can('create', [Offer::class, $serviceRequest]);
+
+            // Lets ServiceRequestResource compute match_level for the
+            // single-request page the same way RequestFeedController does,
+            // so the "doesn't fully match your profile" notice on this page
+            // is driven by the same data as the Feed's ranking/badges.
+            $profile = $request->user()->providerProfile;
+            if ($profile !== null) {
+                $request->attributes->set('viewer_category_ids', $profile->categories()->pluck('categories.id')->all());
+                $request->attributes->set('viewer_area_ids', $profile->areas()->pluck('areas.id')->all());
+            }
         }
 
         return Inertia::render('Requests/Show', [

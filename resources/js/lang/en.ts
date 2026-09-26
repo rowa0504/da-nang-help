@@ -181,9 +181,13 @@ const en = {
 
     'provider.requests.index.title': 'Request Feed',
     'provider.requests.index.heading': 'Request Feed',
-    'provider.requests.index.empty': 'No open requests match your categories and areas right now.',
-    'provider.requests.index.empty_description': 'The requests shown here depend on the categories and areas in your profile. Try updating them.',
-    'provider.requests.index.edit_profile': 'Edit your profile',
+    'provider.requests.index.empty': 'No open requests right now.',
+    'provider.requests.index.empty_description': 'Check back later, or try a different filter.',
+    'provider.requests.index.recommended_only': 'Recommended only',
+    'provider.requests.index.all_categories': 'All categories',
+    'provider.requests.index.all_areas': 'All areas',
+    'provider.requests.index.match_full': 'Recommended',
+    'provider.requests.index.match_partial': 'Partial match',
 
     'provider.profile.title': 'Provider Profile',
     'provider.profile.heading': 'Provider Profile',
@@ -315,6 +319,7 @@ const en = {
     'nav.admin_areas': 'Areas',
 
     'requests.show.private_info_notice': 'The address and contact details below become visible to the provider once you accept their offer.',
+    'requests.show.match_warning': 'This request does not fully match your registered categories/areas.',
 } as const;
 
 export type TranslationKey = keyof typeof en;

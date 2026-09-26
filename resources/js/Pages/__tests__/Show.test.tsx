@@ -1,15 +1,47 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import Show from '@/Pages/Requests/Show';
 import { ServiceRequestData } from '@/types';
 
+const mockUsePage = vi.fn();
+
 vi.mock('@inertiajs/react', () => ({
-    useForm: () => ({ patch: vi.fn(), processing: false }),
+    // Covers both call sites: Show's own top-level useForm() (cancel
+    // button, only needs patch/processing) and OfferForm's
+    // useForm<OfferForm>({...}) (needs the full shape) — one mock shape
+    // that's a superset of both, extra fields are simply unused.
+    useForm: (initial: Record<string, unknown> = {}) => ({
+        data: initial,
+        setData: vi.fn(),
+        post: vi.fn(),
+        patch: vi.fn(),
+        transform: vi.fn(),
+        processing: false,
+        errors: {},
+    }),
     Head: () => null,
-    usePage: () => ({ props: { locale: 'en', auth: { user: null }, flash: { status: null, warning: null } } }),
+    usePage: () => mockUsePage(),
     Link: ({ href, children }: Record<string, unknown> & { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
     router: { patch: vi.fn(), on: vi.fn(() => () => {}) },
 }));
+
+beforeEach(() => {
+    mockUsePage.mockReturnValue({
+        url: '/requests/1',
+        props: { locale: 'en', auth: { user: null }, flash: { status: null, warning: null } },
+    });
+});
+
+function asProviderViewer() {
+    mockUsePage.mockReturnValue({
+        url: '/requests/1',
+        props: {
+            locale: 'en',
+            auth: { user: { id: 1, name: 'P', email: 'p@example.test', role: 'provider', locale: 'en' } },
+            flash: { status: null, warning: null },
+        },
+    });
+}
 
 function baseRequest(overrides: Partial<ServiceRequestData> = {}): ServiceRequestData {
     return {
@@ -48,5 +80,29 @@ describe('Requests/Show private info block', () => {
 
         expect(screen.queryByText('123 Example Street')).not.toBeInTheDocument();
         expect(screen.queryByText(/coordinates/i)).not.toBeInTheDocument();
+    });
+});
+
+describe('Requests/Show match-level warning before sending an offer', () => {
+    it('shows the mismatch warning for a partial match, without disabling the submit button', () => {
+        asProviderViewer();
+        render(<Show request={baseRequest({ match_level: 'partial' })} myOffer={null} canOffer={true} job={null} />);
+
+        expect(screen.getByText('This request does not fully match your registered categories/areas.')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Send offer' })).not.toBeDisabled();
+    });
+
+    it('shows the mismatch warning for no match at all', () => {
+        asProviderViewer();
+        render(<Show request={baseRequest({ match_level: 'none' })} myOffer={null} canOffer={true} job={null} />);
+
+        expect(screen.getByText('This request does not fully match your registered categories/areas.')).toBeInTheDocument();
+    });
+
+    it('does not show a warning for a full match', () => {
+        asProviderViewer();
+        render(<Show request={baseRequest({ match_level: 'full' })} myOffer={null} canOffer={true} job={null} />);
+
+        expect(screen.queryByText('This request does not fully match your registered categories/areas.')).not.toBeInTheDocument();
     });
 });

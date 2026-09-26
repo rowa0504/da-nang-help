@@ -160,7 +160,7 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
                 )}
 
                 {auth.user?.role === 'provider' && (canOffer || myOffer) && (
-                    <OfferSection requestId={request.id} myOffer={myOffer} canOffer={canOffer} />
+                    <OfferSection requestId={request.id} myOffer={myOffer} canOffer={canOffer} matchLevel={request.match_level ?? null} />
                 )}
 
                 {job && (
@@ -191,7 +191,17 @@ type OfferForm = {
     source_locale: SupportedLocale;
 };
 
-function OfferSection({ requestId, myOffer, canOffer }: { requestId: number; myOffer: OfferData | null; canOffer: boolean }) {
+function OfferSection({
+    requestId,
+    myOffer,
+    canOffer,
+    matchLevel,
+}: {
+    requestId: number;
+    myOffer: OfferData | null;
+    canOffer: boolean;
+    matchLevel: ServiceRequestData['match_level'] | null;
+}) {
     const { t } = useTranslation();
 
     if (myOffer && myOffer.status !== 'pending') {
@@ -207,17 +217,25 @@ function OfferSection({ requestId, myOffer, canOffer }: { requestId: number; myO
     }
 
     if (myOffer && myOffer.status === 'pending') {
-        return <OfferForm requestId={requestId} existingOffer={myOffer} />;
+        return <OfferForm requestId={requestId} existingOffer={myOffer} matchLevel={matchLevel} />;
     }
 
     if (canOffer) {
-        return <OfferForm requestId={requestId} existingOffer={null} />;
+        return <OfferForm requestId={requestId} existingOffer={null} matchLevel={matchLevel} />;
     }
 
     return null;
 }
 
-function OfferForm({ requestId, existingOffer }: { requestId: number; existingOffer: OfferData | null }) {
+function OfferForm({
+    requestId,
+    existingOffer,
+    matchLevel,
+}: {
+    requestId: number;
+    existingOffer: OfferData | null;
+    matchLevel: ServiceRequestData['match_level'] | null;
+}) {
     const { auth } = usePage<SharedProps>().props;
     const { t } = useTranslation();
     const { confirm, confirmDialog } = useConfirm();
@@ -266,6 +284,11 @@ function OfferForm({ requestId, existingOffer }: { requestId: number; existingOf
             <h2 className="text-lg font-semibold text-gray-900">
                 {existingOffer ? t('requests.show.edit_offer_heading') : t('requests.show.send_offer_heading')}
             </h2>
+            {matchLevel && matchLevel !== 'full' && (
+                <div className="mt-2">
+                    <Alert variant="warning">{t('requests.show.match_warning')}</Alert>
+                </div>
+            )}
             <form onSubmit={submit} className="mt-3 flex flex-col gap-4">
                 <FormField label={t('common.price')} htmlFor="price" error={errors.price}>
                     <Input

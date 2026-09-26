@@ -66,6 +66,11 @@ export interface ProviderProfileData {
 export type ServiceRequestStatus = 'open' | 'assigned' | 'cancelled';
 export type ServiceRequestUrgency = 'normal' | 'urgent';
 
+// How closely a request matches the viewing Provider's own attached
+// categories/areas — a ranking/display signal only, never an access gate.
+// Present only when the viewer is a Provider with a profile.
+export type MatchLevel = 'full' | 'partial' | 'none';
+
 export interface ServiceRequestPhoto {
     id: number;
     url: string;
@@ -83,6 +88,7 @@ export interface ServiceRequestData {
     status: ServiceRequestStatus;
     created_at: string;
     photos: ServiceRequestPhoto[];
+    match_level?: MatchLevel;
     // Present only when the viewer is the posting Customer or an Admin —
     // the backend Resource decides this, the frontend just renders
     // whatever fields happen to be present (this is a display convenience,

@@ -41,11 +41,11 @@ class CreateOfferAction
                 throw new InvalidOfferTransitionException('This request is not open for offers.');
             }
 
+            // Category/area match is a ranking/display signal only (see
+            // ServiceRequestResource::match_level) — not an eligibility
+            // gate — so a non-matching approved Provider may still offer.
             $profile = $provider->providerProfile;
-            if ($profile === null
-                || $profile->verification_status !== ProviderVerificationStatus::Approved
-                || ! $profile->categories()->where('categories.id', $locked->category_id)->exists()
-                || ! $profile->areas()->where('areas.id', $locked->area_id)->exists()) {
+            if ($profile === null || $profile->verification_status !== ProviderVerificationStatus::Approved) {
                 throw new InvalidOfferTransitionException('This provider is not eligible to offer on this request.');
             }
 

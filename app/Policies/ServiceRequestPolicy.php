@@ -30,12 +30,14 @@ class ServiceRequestPolicy
 
     /**
      * The posting Customer and Admin may always view, regardless of
-     * moderation_status. An approved Provider whose category/area match may
-     * view while the request is open and visible; once the request leaves
-     * `open` (assigned/cancelled), a Provider who already has an offer on
-     * it may keep viewing the public fields and their own offer's status
-     * (Phase 5). A hidden request is never viewable by a Provider, even one
-     * with an existing offer.
+     * moderation_status. Any approved Provider may view while the request is
+     * open and visible — category/area match is a ranking/display signal
+     * only (see RequestFeedController, ServiceRequestResource::match_level),
+     * not an access gate, so it is deliberately not checked here. Once the
+     * request leaves `open` (assigned/cancelled), a Provider who already has
+     * an offer on it may keep viewing the public fields and their own
+     * offer's status (Phase 5). A hidden request is never viewable by a
+     * Provider, even one with an existing offer.
      */
     public function view(User $user, ServiceRequest $serviceRequest): bool
     {
@@ -52,7 +54,7 @@ class ServiceRequestPolicy
         }
 
         if ($serviceRequest->status === ServiceRequestStatus::Open) {
-            return $this->providerMatches($user, $serviceRequest);
+            return $this->isApprovedProvider($user);
         }
 
         return Offer::where('service_request_id', $serviceRequest->id)
@@ -101,14 +103,10 @@ class ServiceRequestPolicy
             && $serviceRequest->moderation_status === ServiceRequestModerationStatus::Visible;
     }
 
-    private function providerMatches(User $user, ServiceRequest $serviceRequest): bool
+    private function isApprovedProvider(User $user): bool
     {
         $profile = $user->providerProfile;
-        if ($profile === null || $profile->verification_status !== ProviderVerificationStatus::Approved) {
-            return false;
-        }
 
-        return $profile->categories()->where('categories.id', $serviceRequest->category_id)->exists()
-            && $profile->areas()->where('areas.id', $serviceRequest->area_id)->exists();
+        return $profile !== null && $profile->verification_status === ProviderVerificationStatus::Approved;
     }
 }

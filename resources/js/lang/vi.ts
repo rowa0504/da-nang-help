@@ -184,9 +184,13 @@ const vi: TranslationDictionary = {
 
     'provider.requests.index.title': 'Danh sách yêu cầu',
     'provider.requests.index.heading': 'Danh sách yêu cầu',
-    'provider.requests.index.empty': 'Hiện không có yêu cầu đang mở phù hợp với danh mục và khu vực của bạn.',
-    'provider.requests.index.empty_description': 'Các yêu cầu hiển thị ở đây phụ thuộc vào danh mục và khu vực trong hồ sơ của bạn. Hãy thử cập nhật lại.',
-    'provider.requests.index.edit_profile': 'Chỉnh sửa hồ sơ',
+    'provider.requests.index.empty': 'Hiện không có yêu cầu đang mở nào.',
+    'provider.requests.index.empty_description': 'Hãy quay lại sau, hoặc thử một bộ lọc khác.',
+    'provider.requests.index.recommended_only': 'Chỉ hiện đề xuất',
+    'provider.requests.index.all_categories': 'Tất cả danh mục',
+    'provider.requests.index.all_areas': 'Tất cả khu vực',
+    'provider.requests.index.match_full': 'Đề xuất',
+    'provider.requests.index.match_partial': 'Khớp một phần',
 
     'provider.profile.title': 'Hồ sơ nhà cung cấp',
     'provider.profile.heading': 'Hồ sơ nhà cung cấp',
@@ -317,6 +321,7 @@ const vi: TranslationDictionary = {
     'nav.admin_areas': 'Areas',
 
     'requests.show.private_info_notice': 'Địa chỉ và thông tin liên hệ bên dưới sẽ được hiển thị cho nhà cung cấp khi bạn chấp nhận báo giá của họ.',
+    'requests.show.match_warning': 'Yêu cầu này không hoàn toàn khớp với thông tin đã đăng ký của bạn.',
 };
 
 export default vi;

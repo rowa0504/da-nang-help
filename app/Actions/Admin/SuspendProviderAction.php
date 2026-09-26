@@ -15,11 +15,11 @@ class SuspendProviderAction
      * Suspension is a one-way transition from `approved` only (no path
      * back to `approved`, see the Phase 9 plan §2#2/#3). Existing pending
      * Offers and in-progress Jobs are left untouched: CreateOfferAction and
-     * RequestFeedController/ServiceRequestPolicy::providerMatches() already
-     * reject a non-`approved` provider, so new Offers/Feed access are
-     * blocked as a side effect of this status change alone. JobPolicy never
-     * reads verification_status, so a suspended provider's existing Jobs
-     * continue normally.
+     * ServiceRequestPolicy::isApprovedProvider()/OfferPolicy::create()
+     * already reject a non-`approved` provider, so new Offers/Feed access
+     * are blocked as a side effect of this status change alone. JobPolicy
+     * never reads verification_status, so a suspended provider's existing
+     * Jobs continue normally.
      */
     public function handle(User $admin, ProviderProfile $providerProfile, string $note): ProviderProfile
     {

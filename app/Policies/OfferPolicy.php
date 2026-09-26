@@ -50,12 +50,12 @@ class OfferPolicy
             return false;
         }
 
+        // Category/area match is a ranking/display signal only (see
+        // ServiceRequestResource::match_level) — not an eligibility gate —
+        // so a non-matching approved Provider may still offer here.
         $profile = $user->providerProfile;
 
-        return $profile !== null
-            && $profile->verification_status === ProviderVerificationStatus::Approved
-            && $profile->categories()->where('categories.id', $serviceRequest->category_id)->exists()
-            && $profile->areas()->where('areas.id', $serviceRequest->area_id)->exists();
+        return $profile !== null && $profile->verification_status === ProviderVerificationStatus::Approved;
     }
 
     public function update(User $user, Offer $offer): bool

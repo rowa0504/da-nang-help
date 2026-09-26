@@ -278,24 +278,56 @@ class ServiceRequestTest extends TestCase
         $provider = $this->approvedProviderFor($category, $area);
 
         $this->actingAs($provider)->get("/requests/{$serviceRequest->id}")->assertOk()->assertInertia(
-            fn (Assert $page) => $page->missing('request.address_text')->missing('request.customer')
+            fn (Assert $page) => $page->missing('request.address_text')
+                ->missing('request.customer')
+                ->where('request.match_level', 'full')
         );
     }
 
-    public function test_pending_or_non_matching_provider_cannot_view(): void
+    /**
+     * Category/area match is a ranking/display signal only — it no longer
+     * gates single-request view access, so an approved-but-mismatched
+     * Provider can view (still without private fields), with
+     * match_level reflecting the mismatch.
+     */
+    public function test_mismatched_approved_provider_can_view_with_a_non_full_match_level(): void
     {
         $category = Category::factory()->create();
         $area = Area::factory()->create();
         $otherCategory = Category::factory()->create();
         $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($otherCategory, $area);
+
+        $this->actingAs($provider)->get("/requests/{$serviceRequest->id}")->assertOk()->assertInertia(
+            fn (Assert $page) => $page->missing('request.address_text')
+                ->missing('request.customer')
+                ->where('request.match_level', 'partial')
+        );
+    }
+
+    public function test_pending_provider_cannot_view(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
 
         $unapprovedProvider = User::factory()->provider()->create();
         ProviderProfile::factory()->forUser($unapprovedProvider)->create(); // pending
 
-        $mismatchedProvider = $this->approvedProviderFor($otherCategory, $area);
-
         $this->actingAs($unapprovedProvider)->get("/requests/{$serviceRequest->id}")->assertForbidden();
-        $this->actingAs($mismatchedProvider)->get("/requests/{$serviceRequest->id}")->assertForbidden();
+    }
+
+    public function test_customer_and_admin_viewers_have_no_match_level(): void
+    {
+        $customer = User::factory()->create();
+        $admin = User::factory()->admin()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+
+        foreach ([$customer, $admin] as $viewer) {
+            $this->actingAs($viewer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+                fn (Assert $page) => $page->missing('request.match_level')
+            );
+        }
     }
 
     public function test_guest_is_redirected_to_login(): void

@@ -183,9 +183,13 @@ const ja: TranslationDictionary = {
 
     'provider.requests.index.title': '依頼フィード',
     'provider.requests.index.heading': '依頼フィード',
-    'provider.requests.index.empty': '対応可能なカテゴリ・エリアに一致する募集中の依頼は現在ありません。',
-    'provider.requests.index.empty_description': '登録しているカテゴリ・エリアによって表示される依頼が変わります。プロフィールを見直してみましょう。',
-    'provider.requests.index.edit_profile': 'プロフィールを編集',
+    'provider.requests.index.empty': '現在、募集中の依頼はありません。',
+    'provider.requests.index.empty_description': '後でもう一度確認するか、別の条件で絞り込んでみてください。',
+    'provider.requests.index.recommended_only': 'おすすめのみ',
+    'provider.requests.index.all_categories': 'すべてのカテゴリ',
+    'provider.requests.index.all_areas': 'すべてのエリア',
+    'provider.requests.index.match_full': 'おすすめ',
+    'provider.requests.index.match_partial': '一部一致',
 
     'provider.profile.title': 'プロバイダープロフィール',
     'provider.profile.heading': 'プロバイダープロフィール',
@@ -316,6 +320,7 @@ const ja: TranslationDictionary = {
     'nav.admin_areas': 'Areas',
 
     'requests.show.private_info_notice': '以下の住所・連絡先は、オファーを承諾した相手のProviderに開示されます。',
+    'requests.show.match_warning': '登録内容と完全には一致しません。',
 };
 
 export default ja;

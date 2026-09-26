@@ -76,18 +76,23 @@ class OfferTest extends TestCase
         $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload())->assertForbidden();
     }
 
-    public function test_category_mismatched_provider_cannot_send_an_offer(): void
+    public function test_category_mismatched_provider_can_still_send_an_offer(): void
     {
+        // Category/area match is a ranking/display signal only (Phase
+        // "broaden provider request discovery") — it no longer gates Offer
+        // eligibility, so a category-mismatched but approved Provider can
+        // still send one.
         $category = Category::factory()->create();
         $otherCategory = Category::factory()->create();
         $area = Area::factory()->create();
         $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
         $provider = $this->approvedProviderFor($otherCategory, $area);
 
-        $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload())->assertForbidden();
+        $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload())->assertRedirect();
+        $this->assertDatabaseHas('offers', ['service_request_id' => $serviceRequest->id, 'provider_id' => $provider->id]);
     }
 
-    public function test_area_mismatched_provider_cannot_send_an_offer(): void
+    public function test_area_mismatched_provider_can_still_send_an_offer(): void
     {
         $category = Category::factory()->create();
         $area = Area::factory()->create();
@@ -95,7 +100,26 @@ class OfferTest extends TestCase
         $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
         $provider = $this->approvedProviderFor($category, $otherArea);
 
-        $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload())->assertForbidden();
+        $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload())->assertRedirect();
+        $this->assertDatabaseHas('offers', ['service_request_id' => $serviceRequest->id, 'provider_id' => $provider->id]);
+    }
+
+    public function test_fully_mismatched_provider_can_still_send_an_offer_via_the_action_directly(): void
+    {
+        // Bypasses the Policy/Controller entirely, mirroring the direct-call
+        // regression pattern used elsewhere in this file — proves the
+        // Action's own lock-and-reverify block no longer rejects a
+        // category/area mismatch either.
+        $category = Category::factory()->create();
+        $otherCategory = Category::factory()->create();
+        $area = Area::factory()->create();
+        $otherArea = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($otherCategory, $otherArea);
+
+        $offer = app(\App\Actions\Offer\CreateOfferAction::class)->handle($provider, $serviceRequest, $this->offerPayload());
+
+        $this->assertSame($serviceRequest->id, $offer->service_request_id);
     }
 
     public function test_hidden_request_cannot_receive_offers(): void
