@@ -22,6 +22,7 @@ return [
     'regex' => 'Định dạng trường :attribute không hợp lệ.',
     'date' => 'Trường :attribute phải là ngày giờ hợp lệ.',
     'file' => 'Trường :attribute phải là một tệp.',
+    'phone_number' => 'Trường :attribute không hợp lệ. Chỉ được dùng chữ số, khoảng trắng, -, (), và tối đa một dấu + ở đầu.',
 
     'between' => [
         'numeric' => 'Trường :attribute phải nằm trong khoảng :min đến :max.',
@@ -44,5 +45,6 @@ return [
 
     'attributes' => [
         'other_service_details' => 'chi tiết dịch vụ khác',
+        'phone' => 'số điện thoại',
     ],
 ];

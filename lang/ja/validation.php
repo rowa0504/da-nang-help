@@ -22,6 +22,7 @@ return [
     'regex' => ':attribute の形式が正しくありません。',
     'date' => ':attribute には有効な日時を入力してください。',
     'file' => ':attribute はファイルを指定してください。',
+    'phone_number' => ':attribute の形式が正しくありません。数字・半角スペース・-・()・先頭の+のみ使用できます。',
 
     'between' => [
         'numeric' => ':attribute は :min から :max の間で入力してください。',
@@ -44,5 +45,6 @@ return [
 
     'attributes' => [
         'other_service_details' => 'その他サービスの詳細',
+        'phone' => '電話番号',
     ],
 ];

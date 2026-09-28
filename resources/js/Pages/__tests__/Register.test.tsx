@@ -48,4 +48,14 @@ describe('Register', () => {
         render(<Register />);
         expect(screen.getByRole('radio', { name: 'Customer' })).toBeChecked();
     });
+
+    it('renders the phone field with tel-appropriate input attributes', () => {
+        window.history.pushState({}, '', '/register');
+        render(<Register />);
+        const phoneInput = screen.getByLabelText('Phone (optional)');
+        expect(phoneInput).toHaveAttribute('type', 'tel');
+        expect(phoneInput).toHaveAttribute('inputMode', 'tel');
+        expect(phoneInput).toHaveAttribute('autoComplete', 'tel');
+        expect(phoneInput).toHaveAttribute('maxLength', '30');
+    });
 });

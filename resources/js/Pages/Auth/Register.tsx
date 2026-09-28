@@ -78,7 +78,14 @@ export default function Register() {
                     </FormField>
 
                     <FormField label={t('auth.phone_optional')} htmlFor="phone" error={errors.phone}>
-                        <Input type="tel" value={data.phone} onChange={(e) => setData('phone', e.target.value)} autoComplete="tel" />
+                        <Input
+                            type="tel"
+                            inputMode="tel"
+                            autoComplete="tel"
+                            maxLength={30}
+                            value={data.phone}
+                            onChange={(e) => setData('phone', e.target.value)}
+                        />
                     </FormField>
 
                     <FormField label={t('auth.password')} htmlFor="password" error={errors.password}>

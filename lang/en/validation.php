@@ -27,6 +27,7 @@ return [
     'regex' => 'The :attribute field format is invalid.',
     'date' => 'The :attribute field must be a valid date.',
     'file' => 'The :attribute field must be a file.',
+    'phone_number' => 'The :attribute field must be a valid phone number (digits, spaces, -, (), and an optional leading + only).',
 
     'between' => [
         'numeric' => 'The :attribute field must be between :min and :max.',
@@ -49,5 +50,6 @@ return [
 
     'attributes' => [
         'other_service_details' => 'other service details',
+        'phone' => 'phone number',
     ],
 ];
