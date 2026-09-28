@@ -3,7 +3,6 @@
 namespace App\Http\Resources;
 
 use App\Enums\MatchLevel;
-use App\Enums\TranslationStatus;
 use App\Enums\UserRole;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -32,22 +31,21 @@ class ServiceRequestResource extends JsonResource
                 || $viewer->id === $assignedProviderId);
         $viewerLocale = $viewer->locale ?? 'en';
         $matchLevel = $this->matchLevelFor($viewer, $request);
-        // title/description share one translation row per locale, so
-        // "is this the machine-translated version" is the same for both.
-        $isTranslated = $viewerLocale !== $this->source_locale
-            && $this->translations->firstWhere('locale', $viewerLocale)?->translation_status === TranslationStatus::Completed;
+        // title/description share one translation row per locale, so the
+        // translation status is the same for both.
+        $translationStatus = $this->translationStatusFor($viewerLocale);
 
         return [
             'id' => $this->id,
             'title' => $this->translatedTitleFor($viewerLocale),
             'description' => $this->translatedDescriptionFor($viewerLocale),
             'title_translation' => [
-                'is_translated' => $isTranslated,
+                'status' => $translationStatus,
                 'source_locale' => $this->source_locale,
                 'original' => $this->title,
             ],
             'description_translation' => [
-                'is_translated' => $isTranslated,
+                'status' => $translationStatus,
                 'source_locale' => $this->source_locale,
                 'original' => $this->description,
             ],
@@ -78,6 +76,25 @@ class ServiceRequestResource extends JsonResource
                 ],
             ] : [],
         ];
+    }
+
+    /**
+     * null means "nothing to show beyond the plain text" — either the
+     * viewer's own locale already equals the source locale (no translation
+     * needed at all), or no translation row exists yet for their locale.
+     * Otherwise returns the row's actual status ('pending'/'completed'/
+     * 'failed') as a plain string, so the frontend can distinguish all
+     * three instead of collapsing them into one boolean.
+     */
+    private function translationStatusFor(string $viewerLocale): ?string
+    {
+        if ($viewerLocale === $this->source_locale) {
+            return null;
+        }
+
+        $translation = $this->translations->firstWhere('locale', $viewerLocale);
+
+        return $translation?->translation_status?->value;
     }
 
     /**

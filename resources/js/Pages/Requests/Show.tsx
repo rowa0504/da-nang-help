@@ -1,5 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { FormEvent } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { JobData, OfferData, OfferStatus, ServiceRequestData, ServiceRequestStatus, ServiceRequestUrgency, SharedProps, SupportedLocale } from '@/types';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
@@ -12,6 +12,7 @@ import { Textarea } from '@/Components/Textarea';
 import { Select } from '@/Components/Select';
 import { Button } from '@/Components/Button';
 import { TranslatedText } from '@/Components/TranslatedText';
+import { TranslationNotice } from '@/Components/TranslationNotice';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useConfirm } from '@/hooks/useConfirm';
 import { TranslationKey } from '@/lang/en';
@@ -75,9 +76,26 @@ function toDatetimeLocalValue(iso?: string | null): string {
 
 export default function Show({ request, myOffer, canOffer, job }: Props) {
     const { auth } = usePage<SharedProps>().props;
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
     const { confirm, confirmDialog } = useConfirm();
     const { patch, processing } = useForm();
+
+    // Title and description share one translation row (same status, same
+    // source_locale — see ServiceRequestResource), so a single toggle
+    // covers both instead of each field having its own.
+    const [showOriginal, setShowOriginal] = useState(false);
+    const titleStatus = request.title_translation.status;
+    const titleSourceLocale = request.title_translation.source_locale;
+
+    useEffect(() => {
+        setShowOriginal(false);
+    }, [request.id, locale, titleStatus, titleSourceLocale]);
+
+    const titleText = titleStatus === 'completed' && showOriginal ? request.title_translation.original : request.title;
+    const descriptionText =
+        request.description_translation.status === 'completed' && showOriginal
+            ? request.description_translation.original
+            : request.description;
 
     async function cancel() {
         const ok = await confirm({ title: t('common.confirm'), body: t('requests.show.confirm_cancel'), confirmVariant: 'danger' });
@@ -100,15 +118,23 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
                 <Head title={request.title} />
 
                 <PageHeader
-                    title={<TranslatedText translation={request.title_translation} translated={request.title} />}
+                    title={
+                        <>
+                            {titleText}
+                            <TranslationNotice
+                                status={titleStatus}
+                                sourceLocale={titleSourceLocale}
+                                showOriginal={showOriginal}
+                                onToggle={() => setShowOriginal((v) => !v)}
+                            />
+                        </>
+                    }
                     actions={<Badge variant={REQUEST_STATUS_VARIANTS[request.status]}>{t(REQUEST_STATUS_KEYS[request.status])}</Badge>}
                 />
                 <p className="mt-1 text-sm text-gray-600">
                     <strong className="font-medium text-gray-800">{t('common.urgency')}:</strong> {t(URGENCY_KEYS[request.urgency])}
                 </p>
-                <p className="mt-3 text-gray-800">
-                    <TranslatedText translation={request.description_translation} translated={request.description} />
-                </p>
+                <p className="mt-3 text-gray-800">{descriptionText}</p>
                 <p className="mt-1 text-sm text-gray-600">
                     <strong className="font-medium text-gray-800">{t('common.category')}:</strong> {request.category.name} ·{' '}
                     <strong className="font-medium text-gray-800">{t('common.area')}:</strong> {request.area.name}
@@ -210,7 +236,8 @@ function OfferSection({
                 <h2 className="text-lg font-semibold text-gray-900">{t('requests.show.your_offer')}</h2>
                 <Badge variant={OFFER_STATUS_VARIANTS[myOffer.status]}>{t(OFFER_STATUS_KEYS[myOffer.status])}</Badge>
                 <p className="mt-2 text-gray-800">
-                    {myOffer.currency} {myOffer.price} — <TranslatedText translation={myOffer.message_translation} translated={myOffer.message} />
+                    {myOffer.currency} {myOffer.price} —{' '}
+                    <TranslatedText id={myOffer.id} translation={myOffer.message_translation} translated={myOffer.message} />
                 </p>
             </Card>
         );

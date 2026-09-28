@@ -118,6 +118,9 @@ const en = {
     'translation.machine_translated': '(machine-translated)',
     'translation.show_original': 'Show original',
     'translation.show_translation': 'Show translation',
+    'translation.original_label': 'Original · {locale}',
+    'translation.pending': 'Translation in progress',
+    'translation.failed': 'Translation unavailable',
 
     'auth.email': 'Email',
     'auth.password': 'Password',

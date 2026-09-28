@@ -5,10 +5,17 @@ export type ProviderVerificationStatus = 'pending' | 'approved' | 'rejected' | '
 // Keep in sync with SetLocale::SUPPORTED (app/Http/Middleware/SetLocale.php).
 export type SupportedLocale = 'en' | 'ja' | 'vi';
 
-// Matches the {is_translated, source_locale, original} shape added to
-// ServiceRequestResource/OfferResource in Phase 8.
+// null means "nothing to show beyond the plain text" — the viewer's own
+// locale already equals the source locale, or no translation row exists
+// yet for their locale. Otherwise reflects the translation row's actual
+// status, so pending/failed/completed are distinguishable instead of
+// collapsing into one boolean.
+export type MachineTranslationStatus = 'pending' | 'completed' | 'failed';
+
+// Matches the {status, source_locale, original} shape on
+// ServiceRequestResource/OfferResource.
 export interface TranslationMeta {
-    is_translated: boolean;
+    status: MachineTranslationStatus | null;
     source_locale: string;
     original: string;
 }

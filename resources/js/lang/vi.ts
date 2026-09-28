@@ -121,6 +121,9 @@ const vi: TranslationDictionary = {
     'translation.machine_translated': '(dịch máy)',
     'translation.show_original': 'Xem nguyên văn',
     'translation.show_translation': 'Xem bản dịch',
+    'translation.original_label': 'Nguyên văn · {locale}',
+    'translation.pending': 'Đang dịch',
+    'translation.failed': 'Không thể dịch',
 
     'auth.email': 'Email',
     'auth.password': 'Mật khẩu',

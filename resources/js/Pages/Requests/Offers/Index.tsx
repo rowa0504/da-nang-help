@@ -93,7 +93,7 @@ export default function Index({ serviceRequest, offers }: Props) {
                                     <Badge variant={OFFER_STATUS_VARIANTS[offer.status]}>{t(OFFER_STATUS_KEYS[offer.status])}</Badge>
                                 </div>
                                 <p className="mt-2 text-gray-800">
-                                    <TranslatedText translation={offer.message_translation} translated={offer.message} />
+                                    <TranslatedText id={offer.id} translation={offer.message_translation} translated={offer.message} />
                                 </p>
                                 {offer.available_at && (
                                     <p className="mt-1 text-sm text-gray-600">

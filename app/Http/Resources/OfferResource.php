@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\TranslationStatus;
 use App\Enums\UserRole;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -21,8 +20,7 @@ class OfferResource extends JsonResource
         $viewer = $request->user();
         $isOwnerOrAdmin = $viewer->id === $this->provider_id || $viewer->role === UserRole::Admin;
         $viewerLocale = $viewer->locale ?? 'en';
-        $isMessageTranslated = $viewerLocale !== $this->source_locale
-            && $this->translations->firstWhere('locale', $viewerLocale)?->translation_status === TranslationStatus::Completed;
+        $messageTranslationStatus = $this->translationStatusFor($viewerLocale);
         // Minimized at the response stage, not just hidden by the frontend:
         // a Provider's other_service_details is only relevant (and only
         // sent to the client) when this Offer's own request was posted
@@ -35,7 +33,7 @@ class OfferResource extends JsonResource
             'currency' => $this->currency,
             'message' => $this->translatedMessageFor($viewerLocale),
             'message_translation' => [
-                'is_translated' => $isMessageTranslated,
+                'status' => $messageTranslationStatus,
                 'source_locale' => $this->source_locale,
                 'original' => $this->message,
             ],
@@ -54,5 +52,24 @@ class OfferResource extends JsonResource
                 'source_locale' => $this->source_locale,
             ] : [],
         ];
+    }
+
+    /**
+     * null means "nothing to show beyond the plain text" — either the
+     * viewer's own locale already equals the source locale (no translation
+     * needed at all), or no translation row exists yet for their locale.
+     * Otherwise returns the row's actual status ('pending'/'completed'/
+     * 'failed') as a plain string, so the frontend can distinguish all
+     * three instead of collapsing them into one boolean.
+     */
+    private function translationStatusFor(string $viewerLocale): ?string
+    {
+        if ($viewerLocale === $this->source_locale) {
+            return null;
+        }
+
+        $translation = $this->translations->firstWhere('locale', $viewerLocale);
+
+        return $translation?->translation_status?->value;
     }
 }

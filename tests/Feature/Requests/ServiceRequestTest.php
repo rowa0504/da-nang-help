@@ -544,11 +544,83 @@ class ServiceRequestTest extends TestCase
 
         $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
             fn (Assert $page) => $page
-                ->where('request.title_translation.is_translated', false)
+                ->where('request.title_translation.status', null)
                 ->where('request.title_translation.source_locale', 'en')
                 ->where('request.title_translation.original', 'Fix my leaking AC')
-                ->where('request.description_translation.is_translated', false)
+                ->where('request.description_translation.status', null)
                 ->where('request.description_translation.original', 'Water is dripping.')
+        );
+    }
+
+    public function test_translation_metadata_status_is_null_when_no_translation_row_exists_for_the_viewer_locale(): void
+    {
+        // A plain factory-created ServiceRequest has no translation rows at
+        // all (only CreateServiceRequestAction creates them, synchronously,
+        // via the real HTTP flow) — this is a defensive edge case, not a
+        // reachable real-world path, but the Resource must still degrade
+        // to "nothing to show" rather than error or report a misleading
+        // status.
+        $customer = User::factory()->create();
+        $customer->locale = 'vi';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'title' => 'Fix my leaking AC',
+            'description' => 'Water is dripping.',
+            'source_locale' => 'en',
+        ]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('request.title_translation.status', null)
+                ->where('request.description_translation.status', null)
+        );
+    }
+
+    public function test_translation_metadata_reports_pending_while_translation_is_not_yet_complete(): void
+    {
+        $customer = User::factory()->create();
+        $customer->locale = 'ja';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'title' => 'Fix my leaking AC',
+            'description' => 'Water is dripping.',
+            'source_locale' => 'en',
+        ]);
+        // Pending is the factory default — reflects the row's real state
+        // immediately after creation, before the translation job runs.
+        ServiceRequestTranslation::factory()->create([
+            'service_request_id' => $serviceRequest->id,
+            'locale' => 'ja',
+        ]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('request.title', 'Fix my leaking AC')
+                ->where('request.title_translation.status', 'pending')
+                ->where('request.description_translation.status', 'pending')
+        );
+    }
+
+    public function test_translation_metadata_reports_failed_when_translation_failed(): void
+    {
+        $customer = User::factory()->create();
+        $customer->locale = 'ja';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'title' => 'Fix my leaking AC',
+            'description' => 'Water is dripping.',
+            'source_locale' => 'en',
+        ]);
+        ServiceRequestTranslation::factory()->failed()->create([
+            'service_request_id' => $serviceRequest->id,
+            'locale' => 'ja',
+        ]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('request.title', 'Fix my leaking AC')
+                ->where('request.title_translation.status', 'failed')
+                ->where('request.description_translation.status', 'failed')
         );
     }
 
@@ -572,9 +644,9 @@ class ServiceRequestTest extends TestCase
         $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
             fn (Assert $page) => $page
                 ->where('request.title', 'エアコンの水漏れを修理してください')
-                ->where('request.title_translation.is_translated', true)
+                ->where('request.title_translation.status', 'completed')
                 ->where('request.title_translation.original', 'Fix my leaking AC')
-                ->where('request.description_translation.is_translated', true)
+                ->where('request.description_translation.status', 'completed')
                 ->where('request.description_translation.original', 'Water is dripping.')
         );
     }

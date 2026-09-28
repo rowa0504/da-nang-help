@@ -120,6 +120,9 @@ const ja: TranslationDictionary = {
     'translation.machine_translated': '（機械翻訳）',
     'translation.show_original': '原文を表示',
     'translation.show_translation': '翻訳を表示',
+    'translation.original_label': '原文・{locale}',
+    'translation.pending': '翻訳準備中',
+    'translation.failed': '翻訳を利用できません',
 
     'auth.email': 'メールアドレス',
     'auth.password': 'パスワード',

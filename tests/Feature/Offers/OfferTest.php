@@ -642,9 +642,78 @@ class OfferTest extends TestCase
 
         $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
             fn (Assert $page) => $page
-                ->where('offers.data.0.message_translation.is_translated', false)
+                ->where('offers.data.0.message_translation.status', null)
                 ->where('offers.data.0.message_translation.source_locale', 'en')
                 ->where('offers.data.0.message_translation.original', 'I can help with this.')
+        );
+    }
+
+    public function test_offer_message_translation_metadata_status_is_null_when_no_translation_row_exists_for_the_viewer_locale(): void
+    {
+        // A plain factory-created Offer has no translation rows at all
+        // (only CreateOfferAction creates them, synchronously, via the
+        // real HTTP flow) — defensive edge case, not a reachable
+        // real-world path.
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $customer = User::factory()->create();
+        $customer->locale = 'vi';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create([
+            'message' => 'I can help with this.',
+            'source_locale' => 'en',
+        ]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page->where('offers.data.0.message_translation.status', null)
+        );
+    }
+
+    public function test_offer_message_translation_metadata_reports_pending_while_translation_is_not_yet_complete(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $customer = User::factory()->create();
+        $customer->locale = 'ja';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $offer = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create([
+            'message' => 'I can help with this.',
+            'source_locale' => 'en',
+        ]);
+        // Pending is the factory default — reflects the row's real state
+        // immediately after creation, before the translation job runs.
+        OfferTranslation::factory()->create(['offer_id' => $offer->id, 'locale' => 'ja']);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('offers.data.0.message', 'I can help with this.')
+                ->where('offers.data.0.message_translation.status', 'pending')
+        );
+    }
+
+    public function test_offer_message_translation_metadata_reports_failed_when_translation_failed(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $customer = User::factory()->create();
+        $customer->locale = 'ja';
+        $customer->save();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $offer = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create([
+            'message' => 'I can help with this.',
+            'source_locale' => 'en',
+        ]);
+        OfferTranslation::factory()->failed()->create(['offer_id' => $offer->id, 'locale' => 'ja']);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('offers.data.0.message', 'I can help with this.')
+                ->where('offers.data.0.message_translation.status', 'failed')
         );
     }
 
@@ -670,7 +739,7 @@ class OfferTest extends TestCase
         $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
             fn (Assert $page) => $page
                 ->where('offers.data.0.message', 'お手伝いできます。')
-                ->where('offers.data.0.message_translation.is_translated', true)
+                ->where('offers.data.0.message_translation.status', 'completed')
                 ->where('offers.data.0.message_translation.original', 'I can help with this.')
         );
     }

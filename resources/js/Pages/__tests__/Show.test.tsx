@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Show from '@/Pages/Requests/Show';
 import { ServiceRequestData } from '@/types';
 
@@ -48,8 +48,8 @@ function baseRequest(overrides: Partial<ServiceRequestData> = {}): ServiceReques
         id: 1,
         title: 'Fix my leaking AC',
         description: 'Water is dripping from the unit.',
-        title_translation: { is_translated: false, source_locale: 'en', original: 'Fix my leaking AC' },
-        description_translation: { is_translated: false, source_locale: 'en', original: 'Water is dripping from the unit.' },
+        title_translation: { status: null, source_locale: 'en', original: 'Fix my leaking AC' },
+        description_translation: { status: null, source_locale: 'en', original: 'Water is dripping from the unit.' },
         category: { id: 1, name: 'Air-con Repair' },
         area: { id: 1, name: 'Hai Chau' },
         urgency: 'normal',
@@ -104,5 +104,82 @@ describe('Requests/Show match-level warning before sending an offer', () => {
         render(<Show request={baseRequest({ match_level: 'full' })} myOffer={null} canOffer={true} job={null} />);
 
         expect(screen.queryByText('This request does not fully match your registered categories/areas.')).not.toBeInTheDocument();
+    });
+});
+
+describe('Requests/Show title/description translation toggle', () => {
+    function completedRequest(): ServiceRequestData {
+        return baseRequest({
+            title: '[ja] Fix my leaking AC',
+            description: '[ja] Water is dripping from the unit.',
+            title_translation: { status: 'completed', source_locale: 'en', original: 'Fix my leaking AC' },
+            description_translation: { status: 'completed', source_locale: 'en', original: 'Water is dripping from the unit.' },
+        });
+    }
+
+    it('shows the translation by default with the machine-translated badge', () => {
+        render(<Show request={completedRequest()} myOffer={null} canOffer={false} job={null} />);
+
+        expect(screen.getByText('[ja] Fix my leaking AC')).toBeInTheDocument();
+        expect(screen.getByText('[ja] Water is dripping from the unit.')).toBeInTheDocument();
+        expect(screen.getByText('(machine-translated)')).toBeInTheDocument();
+    });
+
+    it('toggles the title and description together via a single button, and hides the badge while showing the original', () => {
+        render(<Show request={completedRequest()} myOffer={null} canOffer={false} job={null} />);
+
+        const toggle = screen.getByRole('button', { name: 'Show original' });
+        expect(screen.getAllByRole('button', { name: /Show original|Show translation/ })).toHaveLength(1);
+
+        fireEvent.click(toggle);
+
+        expect(screen.getByText('Fix my leaking AC')).toBeInTheDocument();
+        expect(screen.getByText('Water is dripping from the unit.')).toBeInTheDocument();
+        expect(screen.queryByText('(machine-translated)')).not.toBeInTheDocument();
+        expect(screen.getByText('Original · English')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Show translation' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('shows "pending" with no toggle button while the translation is not ready', () => {
+        render(
+            <Show
+                request={baseRequest({
+                    title_translation: { status: 'pending', source_locale: 'en', original: 'Fix my leaking AC' },
+                    description_translation: { status: 'pending', source_locale: 'en', original: 'Water is dripping from the unit.' },
+                })}
+                myOffer={null}
+                canOffer={false}
+                job={null}
+            />,
+        );
+
+        expect(screen.getByText('Translation in progress')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Show original|Show translation/ })).not.toBeInTheDocument();
+    });
+
+    it('shows "unavailable" with no toggle button when translation failed', () => {
+        render(
+            <Show
+                request={baseRequest({
+                    title_translation: { status: 'failed', source_locale: 'en', original: 'Fix my leaking AC' },
+                    description_translation: { status: 'failed', source_locale: 'en', original: 'Water is dripping from the unit.' },
+                })}
+                myOffer={null}
+                canOffer={false}
+                job={null}
+            />,
+        );
+
+        expect(screen.getByText('Translation unavailable')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Show original|Show translation/ })).not.toBeInTheDocument();
+    });
+
+    it('shows no badge, status text, or toggle when the viewer locale matches the source locale', () => {
+        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null} />);
+
+        expect(screen.queryByText('(machine-translated)')).not.toBeInTheDocument();
+        expect(screen.queryByText('Translation in progress')).not.toBeInTheDocument();
+        expect(screen.queryByText('Translation unavailable')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /Show original|Show translation/ })).not.toBeInTheDocument();
     });
 });

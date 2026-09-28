@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import Index from '@/Pages/Requests/Offers/Index';
 import { OfferData, PaginatedData } from '@/types';
 
@@ -16,7 +16,7 @@ function offer(overrides: Partial<OfferData> = {}): OfferData {
         price: '100.00',
         currency: 'USD',
         message: 'I can help.',
-        message_translation: { is_translated: false, source_locale: 'en', original: 'I can help.' },
+        message_translation: { status: null, source_locale: 'en', original: 'I can help.' },
         available_at: null,
         status: 'pending',
         created_at: '2026-01-01T00:00:00Z',
@@ -65,5 +65,37 @@ describe('Requests/Offers/Index other_service_details display', () => {
     it('hides the row when there is no value, even under the "other" category', () => {
         render(<Index serviceRequest={{ id: 1, title: 'Need something odd', category_slug: 'other' }} offers={paginated([offer()])} />);
         expect(screen.queryByText('Other service details:', { exact: false })).not.toBeInTheDocument();
+    });
+});
+
+describe('Requests/Offers/Index translation toggle independence', () => {
+    it('toggles each offer independently — switching one to the original leaves the other showing its translation', () => {
+        render(
+            <Index
+                serviceRequest={{ id: 1, title: 'Need something odd', category_slug: 'other' }}
+                offers={paginated([
+                    offer({
+                        id: 1,
+                        message: '[ja] I can help.',
+                        message_translation: { status: 'completed', source_locale: 'en', original: 'I can help.' },
+                    }),
+                    offer({
+                        id: 2,
+                        message: '[ja] I can also help.',
+                        message_translation: { status: 'completed', source_locale: 'en', original: 'I can also help.' },
+                    }),
+                ])}
+            />,
+        );
+
+        const toggles = screen.getAllByRole('button', { name: 'Show original' });
+        expect(toggles).toHaveLength(2);
+
+        fireEvent.click(toggles[0]);
+
+        expect(screen.getByText('I can help.')).toBeInTheDocument();
+        expect(screen.getByText('[ja] I can also help.')).toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: 'Show original' })).toHaveLength(1);
+        expect(screen.getAllByRole('button', { name: 'Show translation' })).toHaveLength(1);
     });
 });
