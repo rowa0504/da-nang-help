@@ -22,6 +22,7 @@ interface Props {
     myOffer: OfferData | null;
     canOffer: boolean;
     job: JobData | null;
+    can_edit: boolean;
 }
 
 // Explicit, exhaustive correspondence tables — a missing case here is a
@@ -74,7 +75,7 @@ function toDatetimeLocalValue(iso?: string | null): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-export default function Show({ request, myOffer, canOffer, job }: Props) {
+export default function Show({ request, myOffer, canOffer, job, can_edit }: Props) {
     const { auth } = usePage<SharedProps>().props;
     const { t, locale } = useTranslation();
     const { confirm, confirmDialog } = useConfirm();
@@ -169,6 +170,14 @@ export default function Show({ request, myOffer, canOffer, job }: Props) {
                             </dl>
                         </Card>
                     </div>
+                )}
+
+                {can_edit && (
+                    <p className="mt-4">
+                        <Link href={`/requests/${request.id}/edit`} className="text-brand-600 underline hover:text-brand-700">
+                            {t('requests.show.edit')}
+                        </Link>
+                    </p>
                 )}
 
                 {auth.user?.role === 'customer' && request.status === 'open' && (

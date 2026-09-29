@@ -12,4 +12,5 @@ return [
     'area_updated' => 'エリアを更新しました。',
     'provider_profile_submitted' => 'Providerプロフィールを審査のために送信しました。',
     'provider_profile_updated' => '変更内容を審査のために送信しました。',
+    'service_request_updated' => '依頼内容を更新しました。',
 ];

@@ -7,6 +7,8 @@ Route::middleware('auth')->prefix('requests')->name('requests.')->group(function
     Route::get('/', [ServiceRequestController::class, 'index'])->name('index');
     Route::get('/create', [ServiceRequestController::class, 'create'])->name('create');
     Route::post('/', [ServiceRequestController::class, 'store'])->name('store');
+    Route::get('/{serviceRequest}/edit', [ServiceRequestController::class, 'edit'])->name('edit');
+    Route::patch('/{serviceRequest}', [ServiceRequestController::class, 'update'])->name('update');
     Route::get('/{serviceRequest}', [ServiceRequestController::class, 'show'])->name('show');
     Route::patch('/{serviceRequest}/cancel', [ServiceRequestController::class, 'cancel'])->name('cancel');
 });

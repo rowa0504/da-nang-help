@@ -12,4 +12,5 @@ return [
     'area_updated' => 'Đã cập nhật khu vực.',
     'provider_profile_submitted' => 'Hồ sơ nhà cung cấp của bạn đã được gửi để xét duyệt.',
     'provider_profile_updated' => 'Các thay đổi của bạn đã được gửi để xét duyệt.',
+    'service_request_updated' => 'Yêu cầu của bạn đã được cập nhật.',
 ];

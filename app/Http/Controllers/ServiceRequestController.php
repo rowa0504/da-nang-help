@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Actions\ServiceRequest\CancelServiceRequestAction;
 use App\Actions\ServiceRequest\CreateServiceRequestAction;
+use App\Actions\ServiceRequest\UpdateServiceRequestAction;
 use App\Enums\UserRole;
 use App\Exceptions\InvalidServiceRequestTransitionException;
 use App\Http\Requests\ServiceRequest\CancelServiceRequestRequest;
 use App\Http\Requests\ServiceRequest\CreateServiceRequestRequest;
+use App\Http\Requests\ServiceRequest\UpdateServiceRequestRequest;
 use App\Http\Resources\JobResource;
 use App\Http\Resources\OfferResource;
 use App\Http\Resources\ServiceRequestResource;
@@ -17,6 +19,7 @@ use App\Models\Offer;
 use App\Models\ServiceRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,16 +56,37 @@ class ServiceRequestController extends Controller
         $this->authorize('create', ServiceRequest::class);
 
         return Inertia::render('Requests/Create', [
-            'categories' => Category::query()
-                ->activeOrdered()
-                ->with('translations')
-                ->get()
-                ->map(fn (Category $category) => [
-                    'id' => $category->id,
-                    'slug' => $category->slug,
-                    'name' => $category->nameFor(app()->getLocale()),
+            'categories' => $this->categoryOptions(),
+            'areas' => $this->areaOptions(),
+        ]);
+    }
+
+    public function edit(Request $request, ServiceRequest $serviceRequest): Response
+    {
+        $this->authorize('update', $serviceRequest);
+
+        $serviceRequest->load('photos');
+
+        return Inertia::render('Requests/Edit', [
+            'serviceRequest' => [
+                'id' => $serviceRequest->id,
+                // Always the DB original — never a translated value — so
+                // editing never accidentally saves translated text back as
+                // the source of truth.
+                'title' => $serviceRequest->title,
+                'description' => $serviceRequest->description,
+                'category_id' => $serviceRequest->category_id,
+                'area_id' => $serviceRequest->area_id,
+                'address_text' => $serviceRequest->address_text,
+                'urgency' => $serviceRequest->urgency->value,
+                'source_locale' => $serviceRequest->source_locale,
+                'photos' => $serviceRequest->photos->map(fn ($photo) => [
+                    'id' => $photo->id,
+                    'url' => Storage::disk(config('filesystems.default'))->temporaryUrl($photo->object_key, now()->addMinutes(15)),
                 ]),
-            'areas' => Area::query()->active()->orderBy('name')->get(['id', 'name', 'slug']),
+            ],
+            'categories' => $this->categoryOptions($serviceRequest->category_id),
+            'areas' => $this->areaOptions($serviceRequest->area_id),
         ]);
     }
 
@@ -143,6 +167,7 @@ class ServiceRequestController extends Controller
             'myOffer' => $myOffer,
             'canOffer' => $canOffer,
             'job' => $jobProp,
+            'can_edit' => $request->user()->can('update', $serviceRequest),
         ]);
     }
 
@@ -157,5 +182,87 @@ class ServiceRequestController extends Controller
         }
 
         return redirect()->route('requests.show', $serviceRequest);
+    }
+
+    public function update(UpdateServiceRequestRequest $request, ServiceRequest $serviceRequest, UpdateServiceRequestAction $action): RedirectResponse
+    {
+        $this->authorize('update', $serviceRequest);
+
+        try {
+            $result = $action->handle(
+                $request->user(),
+                $serviceRequest,
+                $request->safe()->only(['title', 'description', 'category_id', 'area_id', 'address_text', 'urgency']),
+                $request->file('photos', []),
+                $request->input('remove_photo_ids', [])
+            );
+        } catch (InvalidServiceRequestTransitionException $e) {
+            return back()->withErrors(['status' => $e->getMessage()]);
+        }
+
+        $redirect = redirect()->route('requests.show', $result->serviceRequest)->with('status', __('messages.service_request_updated'));
+        if ($result->photoWarnings !== []) {
+            $redirect->with('warning', implode(' ', $result->photoWarnings));
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{id: int, slug: string, name: string, is_inactive: bool}>
+     */
+    private function categoryOptions(?int $includeCurrentId = null): \Illuminate\Support\Collection
+    {
+        $categories = Category::query()
+            ->activeOrdered()
+            ->with('translations')
+            ->get()
+            ->map(fn (Category $category) => [
+                'id' => $category->id,
+                'slug' => $category->slug,
+                'name' => $category->nameFor(app()->getLocale()),
+                'is_inactive' => false,
+            ]);
+
+        if ($includeCurrentId !== null && ! $categories->contains('id', $includeCurrentId)) {
+            // The request's own current category was deactivated since it
+            // was posted — still offered as an option (so re-saving without
+            // touching it doesn't force a change). is_inactive is a plain
+            // flag, not pre-baked text: the "no longer accepting" wording
+            // lives in the frontend dictionary (resources/js/lang/*.ts,
+            // requests.edit.inactive_option_suffix) via useTranslation(),
+            // not Laravel's own __() — those are two separate translation
+            // systems, and this string only exists in the former.
+            $current = Category::query()->with('translations')->findOrFail($includeCurrentId);
+            $categories->push([
+                'id' => $current->id,
+                'slug' => $current->slug,
+                'name' => $current->nameFor(app()->getLocale()),
+                'is_inactive' => true,
+            ]);
+        }
+
+        return $categories;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, array{id: int, name: string, slug: string, is_inactive: bool}>
+     */
+    private function areaOptions(?int $includeCurrentId = null): \Illuminate\Support\Collection
+    {
+        $areas = Area::query()->active()->orderBy('name')->get(['id', 'name', 'slug']);
+        $mapped = $areas->map(fn (Area $area) => ['id' => $area->id, 'name' => $area->name, 'slug' => $area->slug, 'is_inactive' => false]);
+
+        if ($includeCurrentId !== null && ! $mapped->contains('id', $includeCurrentId)) {
+            $current = Area::query()->findOrFail($includeCurrentId);
+            $mapped->push([
+                'id' => $current->id,
+                'name' => $current->name,
+                'slug' => $current->slug,
+                'is_inactive' => true,
+            ]);
+        }
+
+        return $mapped;
     }
 }

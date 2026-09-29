@@ -73,6 +73,21 @@ class ServiceRequestPolicy
     }
 
     /**
+     * Only the posting Customer may edit their own request — never Admin,
+     * even though Admin can view/hide it — and only while it is still open,
+     * still visible, and has not received a single Offer yet (any status,
+     * any Provider). UpdateServiceRequestAction re-verifies every one of
+     * these again after acquiring a row lock, as the authoritative check.
+     */
+    public function update(User $user, ServiceRequest $serviceRequest): bool
+    {
+        return $user->id === $serviceRequest->customer_id
+            && $serviceRequest->status === ServiceRequestStatus::Open
+            && $serviceRequest->moderation_status === ServiceRequestModerationStatus::Visible
+            && ! Offer::where('service_request_id', $serviceRequest->id)->exists();
+    }
+
+    /**
      * Gate for GET /provider/requests: an approved Provider only.
      */
     public function viewFeed(User $user): bool

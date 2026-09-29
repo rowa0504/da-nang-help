@@ -23,6 +23,7 @@ return [
     'date' => 'Trường :attribute phải là ngày giờ hợp lệ.',
     'file' => 'Trường :attribute phải là một tệp.',
     'phone_number' => 'Trường :attribute không hợp lệ. Chỉ được dùng chữ số, khoảng trắng, -, (), và tối đa một dấu + ở đầu.',
+    'photo_limit_exceeded' => 'Yêu cầu dịch vụ chỉ được có tối đa :max ảnh.',
 
     'between' => [
         'numeric' => 'Trường :attribute phải nằm trong khoảng :min đến :max.',

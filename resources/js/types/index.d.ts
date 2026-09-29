@@ -46,12 +46,18 @@ export interface CategoryOption {
     id: number;
     slug: string;
     name: string;
+    // Present (true) only for the one extra entry the Edit form's picker
+    // can carry: the request's own current category, still offered even
+    // after an Admin deactivated it. Absent/false for every normal,
+    // currently-active option — Create.tsx never sets or reads this.
+    is_inactive?: boolean;
 }
 
 export interface AreaOption {
     id: number;
     name: string;
     slug: string;
+    is_inactive?: boolean;
 }
 
 export interface ProviderProfileData {
@@ -106,6 +112,23 @@ export interface ServiceRequestData {
     lat?: number | null;
     lng?: number | null;
     customer?: { name: string; email: string; phone: string | null };
+}
+
+// Props for the edit form only — always the DB original title/description
+// (never translated text) and the fixed, non-editable source_locale, plus
+// the active-category/area picker options (which may include one extra
+// inactive entry for the request's own current value — see
+// ServiceRequestController::categoryOptions()/areaOptions()).
+export interface ServiceRequestEditData {
+    id: number;
+    title: string;
+    description: string;
+    category_id: number;
+    area_id: number;
+    address_text: string;
+    urgency: ServiceRequestUrgency;
+    source_locale: SupportedLocale;
+    photos: ServiceRequestPhoto[];
 }
 
 export interface PaginationLinks {

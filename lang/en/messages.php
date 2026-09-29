@@ -12,4 +12,5 @@ return [
     'area_updated' => 'Area updated.',
     'provider_profile_submitted' => 'Your provider profile has been submitted for review.',
     'provider_profile_updated' => 'Your changes have been submitted for review.',
+    'service_request_updated' => 'Your request has been updated.',
 ];

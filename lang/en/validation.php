@@ -28,6 +28,7 @@ return [
     'date' => 'The :attribute field must be a valid date.',
     'file' => 'The :attribute field must be a file.',
     'phone_number' => 'The :attribute field must be a valid phone number (digits, spaces, -, (), and an optional leading + only).',
+    'photo_limit_exceeded' => 'A service request may have at most :max photos.',
 
     'between' => [
         'numeric' => 'The :attribute field must be between :min and :max.',

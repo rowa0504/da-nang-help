@@ -4,6 +4,8 @@ namespace Tests\Feature\Requests;
 
 use App\Actions\ServiceRequest\CancelServiceRequestAction;
 use App\Actions\ServiceRequest\CreateServiceRequestAction;
+use App\Actions\ServiceRequest\UpdateServiceRequestAction;
+use App\Enums\OfferStatus;
 use App\Enums\ServiceRequestModerationStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\TranslationStatus;
@@ -12,7 +14,9 @@ use App\Jobs\TranslateServiceRequestJob;
 use App\Models\Area;
 use App\Models\Category;
 use App\Models\CategoryTranslation;
+use App\Models\Offer;
 use App\Models\ProviderProfile;
+use App\Models\RequestPhoto;
 use App\Models\ServiceRequest;
 use App\Models\ServiceRequestTranslation;
 use App\Models\User;
@@ -24,6 +28,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ServiceRequestTest extends TestCase
@@ -734,5 +739,570 @@ class ServiceRequestTest extends TestCase
         // loaded before nameFor() resolves each name), quadrupling the
         // category count would proportionally increase the query count.
         $this->assertSame($queryCountForThree, $queryCountForTwelve);
+    }
+
+    private function editPayload(ServiceRequest $serviceRequest, array $overrides = []): array
+    {
+        return array_merge([
+            'title' => $serviceRequest->title,
+            'description' => $serviceRequest->description,
+            'category_id' => $serviceRequest->category_id,
+            'area_id' => $serviceRequest->area_id,
+            'address_text' => $serviceRequest->address_text,
+            'urgency' => $serviceRequest->urgency->value,
+        ], $overrides);
+    }
+
+    public function test_owner_can_view_the_edit_form_with_db_original_text_and_fixed_source_locale(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'title' => 'Original title',
+            'description' => 'Original description',
+            'source_locale' => 'ja',
+        ]);
+        // A completed translation exists for 'en' — the edit form must
+        // still show the DB original (Japanese), never this English text,
+        // regardless of the viewer's own UI locale.
+        ServiceRequestTranslation::factory()->completed()->create([
+            'service_request_id' => $serviceRequest->id,
+            'locale' => 'en',
+            'title' => 'Translated title',
+            'description' => 'Translated description',
+        ]);
+        $customer->locale = 'en';
+        $customer->save();
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/edit")->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->component('Requests/Edit')
+                ->where('serviceRequest.title', 'Original title')
+                ->where('serviceRequest.description', 'Original description')
+                ->where('serviceRequest.source_locale', 'ja')
+        );
+    }
+
+    public function test_update_succeeds_and_redirects_to_show_page(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+
+        $response = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['title' => 'Updated title'])
+        );
+
+        $response->assertRedirect(route('requests.show', $serviceRequest));
+        $this->assertSame('Updated title', $serviceRequest->fresh()->title);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function localeProvider(): array
+    {
+        return [
+            'en' => ['en'],
+            'ja' => ['ja'],
+            'vi' => ['vi'],
+        ];
+    }
+
+    #[DataProvider('localeProvider')]
+    public function test_update_flash_message_is_localized(string $locale): void
+    {
+        $expected = [
+            'en' => 'Your request has been updated.',
+            'ja' => '依頼内容を更新しました。',
+            'vi' => 'Yêu cầu của bạn đã được cập nhật.',
+        ];
+        $customer = User::factory()->create(['locale' => $locale]);
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+
+        $this->actingAs($customer)
+            ->patch("/requests/{$serviceRequest->id}", $this->editPayload($serviceRequest))
+            ->assertSessionHas('status', $expected[$locale]);
+    }
+
+    public function test_source_locale_cannot_be_changed_via_edit(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['source_locale' => 'en']);
+
+        // UpdateServiceRequestRequest doesn't even accept a source_locale
+        // field, so submitting one is simply ignored, not rejected.
+        $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest) + ['source_locale' => 'vi']
+        )->assertRedirect(route('requests.show', $serviceRequest));
+
+        $this->assertSame('en', $serviceRequest->fresh()->source_locale);
+    }
+
+    public function test_title_change_resets_translations_to_pending_and_dispatches_jobs(): void
+    {
+        Queue::fake();
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['source_locale' => 'en']);
+        ServiceRequestTranslation::factory()->completed()->create(['service_request_id' => $serviceRequest->id, 'locale' => 'ja']);
+        ServiceRequestTranslation::factory()->completed()->create(['service_request_id' => $serviceRequest->id, 'locale' => 'vi']);
+
+        $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['title' => 'A brand new title'])
+        )->assertRedirect(route('requests.show', $serviceRequest));
+
+        foreach (['ja', 'vi'] as $locale) {
+            $translation = ServiceRequestTranslation::where('service_request_id', $serviceRequest->id)->where('locale', $locale)->firstOrFail();
+            $this->assertSame(TranslationStatus::Pending, $translation->translation_status);
+            $this->assertNull($translation->translated_at);
+            // Matches UpdateOfferAction's own convention exactly: the row's
+            // text is overwritten with the new source text (not nulled)
+            // while status flips back to pending.
+            $this->assertSame('A brand new title', $translation->title);
+        }
+        Queue::assertPushed(TranslateServiceRequestJob::class, 2);
+    }
+
+    public function test_description_change_alone_also_resets_translations(): void
+    {
+        Queue::fake();
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['source_locale' => 'en']);
+        ServiceRequestTranslation::factory()->completed()->create(['service_request_id' => $serviceRequest->id, 'locale' => 'ja']);
+
+        $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['description' => 'A brand new description'])
+        );
+
+        $translation = ServiceRequestTranslation::where('service_request_id', $serviceRequest->id)->where('locale', 'ja')->firstOrFail();
+        $this->assertSame(TranslationStatus::Pending, $translation->translation_status);
+        Queue::assertPushed(TranslateServiceRequestJob::class);
+    }
+
+    public function test_category_area_address_urgency_only_changes_do_not_touch_translations(): void
+    {
+        Queue::fake();
+        $customer = User::factory()->create();
+        $newCategory = Category::factory()->create();
+        $newArea = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['source_locale' => 'en']);
+        $translation = ServiceRequestTranslation::factory()->completed()->create([
+            'service_request_id' => $serviceRequest->id,
+            'locale' => 'ja',
+            'title' => 'Already translated title',
+        ]);
+        $translatedAt = $translation->translated_at;
+
+        $this->actingAs($customer)->patch("/requests/{$serviceRequest->id}", $this->editPayload($serviceRequest, [
+            'category_id' => $newCategory->id,
+            'area_id' => $newArea->id,
+            'address_text' => 'A brand new address',
+            'urgency' => 'urgent',
+        ]));
+
+        $fresh = $translation->fresh();
+        $this->assertSame(TranslationStatus::Completed, $fresh->translation_status);
+        $this->assertSame('Already translated title', $fresh->title);
+        $this->assertEquals($translatedAt, $fresh->translated_at);
+        Queue::assertNotPushed(TranslateServiceRequestJob::class);
+    }
+
+    public function test_keeps_the_current_category_and_area_even_after_they_are_deactivated(): void
+    {
+        $customer = User::factory()->create();
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'category_id' => $category->id,
+            'area_id' => $area->id,
+        ]);
+        $category->update(['is_active' => false]);
+        $area->update(['is_active' => false]);
+
+        $response = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['category_id' => $category->id, 'area_id' => $area->id])
+        );
+
+        $response->assertRedirect(route('requests.show', $serviceRequest));
+        $this->assertSame($category->id, $serviceRequest->fresh()->category_id);
+    }
+
+    public function test_edit_form_includes_the_inactive_current_category_and_area_as_extra_options(): void
+    {
+        $customer = User::factory()->create();
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'category_id' => $category->id,
+            'area_id' => $area->id,
+        ]);
+        $category->update(['is_active' => false]);
+        $area->update(['is_active' => false]);
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/edit")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('categories', fn ($categories) => collect($categories)->pluck('id')->contains($category->id))
+                ->where('areas', fn ($areas) => collect($areas)->pluck('id')->contains($area->id))
+        );
+    }
+
+    public function test_cannot_switch_to_a_different_inactive_category_or_area(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        $neverUsedInactiveCategory = Category::factory()->inactive()->create();
+        $neverUsedInactiveArea = Area::factory()->inactive()->create();
+
+        $responseA = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['category_id' => $neverUsedInactiveCategory->id])
+        );
+        $responseA->assertInvalid(['category_id']);
+
+        $responseB = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['area_id' => $neverUsedInactiveArea->id])
+        );
+        $responseB->assertInvalid(['area_id']);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function canEditFalseCaseProvider(): array
+    {
+        return [
+            'hidden' => ['hidden'],
+            'assigned' => ['assigned'],
+            'cancelled' => ['cancelled'],
+        ];
+    }
+
+    #[DataProvider('canEditFalseCaseProvider')]
+    public function test_owner_cannot_edit_when_the_request_is_not_open_and_visible(string $case): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = match ($case) {
+            'hidden' => ServiceRequest::factory()->forCustomer($customer)->hidden()->create(),
+            'assigned' => ServiceRequest::factory()->forCustomer($customer)->create(['status' => ServiceRequestStatus::Assigned]),
+            'cancelled' => ServiceRequest::factory()->forCustomer($customer)->cancelled()->create(),
+        };
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/edit")->assertForbidden();
+        $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest)
+        )->assertForbidden();
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function anyOfferStatusProvider(): array
+    {
+        return [
+            'pending' => ['pending'],
+            'accepted' => ['accepted'],
+            'rejected' => ['rejected'],
+            'withdrawn' => ['withdrawn'],
+            'cancelled' => ['cancelled'],
+        ];
+    }
+
+    /**
+     * Editing must be blocked for as long as ANY Offer exists, in ANY
+     * status — not only a still-pending one.
+     */
+    #[DataProvider('anyOfferStatusProvider')]
+    public function test_owner_cannot_edit_once_any_offer_exists_regardless_of_its_status(string $offerStatus): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $factory = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider);
+        match ($offerStatus) {
+            'pending' => $factory->create(),
+            'accepted' => $factory->accepted()->create(),
+            'rejected' => $factory->rejected()->create(),
+            'withdrawn' => $factory->withdrawn()->create(),
+            'cancelled' => $factory->cancelled()->create(),
+        };
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}/edit")->assertForbidden();
+        $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest)
+        )->assertForbidden();
+    }
+
+    public function test_other_customer_provider_and_admin_cannot_edit(): void
+    {
+        $owner = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($owner)->create();
+        $otherCustomer = User::factory()->create();
+        $provider = User::factory()->provider()->create();
+        $admin = User::factory()->admin()->create();
+
+        foreach ([$otherCustomer, $provider, $admin] as $user) {
+            $this->actingAs($user)->get("/requests/{$serviceRequest->id}/edit")->assertForbidden();
+            $this->actingAs($user)->patch(
+                "/requests/{$serviceRequest->id}",
+                $this->editPayload($serviceRequest)
+            )->assertForbidden();
+        }
+    }
+
+    public function test_can_edit_prop_is_true_for_the_owner_on_an_open_visible_offer_free_request(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('can_edit', true)
+        );
+    }
+
+    public function test_can_edit_prop_is_false_once_an_offer_exists(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('can_edit', false)
+        );
+    }
+
+    public function test_can_edit_prop_is_false_for_admin_even_though_admin_can_view(): void
+    {
+        $serviceRequest = ServiceRequest::factory()->create();
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('can_edit', false)
+        );
+    }
+
+    public function test_remove_photo_ids_rejects_an_id_belonging_to_another_request(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        $otherRequest = ServiceRequest::factory()->create();
+        $otherPhoto = RequestPhoto::factory()->create(['service_request_id' => $otherRequest->id]);
+
+        $response = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['remove_photo_ids' => [$otherPhoto->id]])
+        );
+
+        $response->assertInvalid(['remove_photo_ids.0']);
+        $this->assertDatabaseHas('request_photos', ['id' => $otherPhoto->id, 'service_request_id' => $otherRequest->id]);
+    }
+
+    public function test_remove_photo_ids_rejects_a_duplicate_id(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        $photo = RequestPhoto::factory()->create(['service_request_id' => $serviceRequest->id]);
+
+        $response = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['remove_photo_ids' => [$photo->id, $photo->id]])
+        );
+
+        $response->assertInvalid(['remove_photo_ids.0']);
+    }
+
+    public function test_five_photos_remove_two_and_add_two_succeeds(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        $photos = RequestPhoto::factory()->count(5)->sequence(fn ($sequence) => ['sort_order' => $sequence->index])->create([
+            'service_request_id' => $serviceRequest->id,
+        ]);
+        $toRemove = $photos->take(2)->pluck('id')->all();
+
+        $response = $this->actingAs($customer)->patch("/requests/{$serviceRequest->id}", array_merge(
+            $this->editPayload($serviceRequest),
+            [
+                'remove_photo_ids' => $toRemove,
+                'photos' => [$this->realJpegFile('a.jpg'), $this->realJpegFile('b.jpg')],
+            ],
+        ));
+
+        $response->assertRedirect(route('requests.show', $serviceRequest));
+        $this->assertSame(5, RequestPhoto::where('service_request_id', $serviceRequest->id)->count());
+        foreach ($toRemove as $id) {
+            $this->assertDatabaseMissing('request_photos', ['id' => $id]);
+        }
+    }
+
+    public function test_five_photos_remove_one_and_add_two_is_rejected(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        $photos = RequestPhoto::factory()->count(5)->sequence(fn ($sequence) => ['sort_order' => $sequence->index])->create([
+            'service_request_id' => $serviceRequest->id,
+        ]);
+        $toRemove = $photos->take(1)->pluck('id')->all();
+
+        $response = $this->actingAs($customer)->patch("/requests/{$serviceRequest->id}", array_merge(
+            $this->editPayload($serviceRequest),
+            [
+                'remove_photo_ids' => $toRemove,
+                'photos' => [$this->realJpegFile('a.jpg'), $this->realJpegFile('b.jpg')],
+            ],
+        ));
+
+        $response->assertInvalid(['photos']);
+        $this->assertSame(5, RequestPhoto::where('service_request_id', $serviceRequest->id)->count());
+    }
+
+    public function test_db_failure_during_update_removes_only_the_new_photo_and_keeps_existing_ones(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        $existingPhoto = RequestPhoto::factory()->create(['service_request_id' => $serviceRequest->id, 'object_key' => 'service-requests/existing.jpg']);
+        Storage::disk(config('filesystems.default'))->put('service-requests/existing.jpg', 'fake-existing-contents');
+
+        $thrown = null;
+        try {
+            app(UpdateServiceRequestAction::class)->handle(
+                $customer,
+                $serviceRequest,
+                [
+                    'title' => $serviceRequest->title,
+                    'description' => $serviceRequest->description,
+                    'category_id' => 999_999, // FK violation inside the transaction
+                    'area_id' => $serviceRequest->area_id,
+                    'address_text' => $serviceRequest->address_text,
+                    'urgency' => $serviceRequest->urgency->value,
+                ],
+                [$this->realJpegFile()],
+                []
+            );
+        } catch (QueryException $e) {
+            $thrown = $e;
+        }
+
+        $this->assertNotNull($thrown, 'Expected the original DB exception to be re-thrown.');
+        // Only the one pre-existing photo remains — the newly uploaded one
+        // was never attached to a committed row, and was compensated away.
+        $this->assertSame(1, RequestPhoto::where('service_request_id', $serviceRequest->id)->count());
+        $this->assertDatabaseHas('request_photos', ['id' => $existingPhoto->id]);
+        $newlyStoredFiles = array_filter(
+            Storage::disk(config('filesystems.default'))->allFiles('service-requests'),
+            fn ($path) => $path !== 'service-requests/existing.jpg'
+        );
+        $this->assertEmpty($newlyStoredFiles, 'The newly uploaded photo should have been cleaned up.');
+        $this->assertTrue(Storage::disk(config('filesystems.default'))->exists('service-requests/existing.jpg'), 'The pre-existing photo must be untouched.');
+    }
+
+    /**
+     * CreateOfferAction already locks the same ServiceRequest row before
+     * creating an Offer (confirmed by reading that Action directly), so —
+     * in a real concurrent scenario — this row lock is what serializes an
+     * edit submission against an Offer arriving in between. This test
+     * cannot reproduce true concurrency (PHPUnit is single-threaded); it
+     * verifies the half that actually matters: once an Offer has already
+     * committed, the edit Action's own re-check after acquiring the lock
+     * correctly rejects a stale submission, including compensating away
+     * any newly uploaded photo.
+     */
+    public function test_offer_arriving_before_the_edit_action_runs_is_rejected_and_compensates_the_new_photo(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+
+        // Simulates "an Offer arrived after the edit page loaded, but
+        // before this submit reached the server".
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        $thrown = null;
+        try {
+            app(UpdateServiceRequestAction::class)->handle(
+                $customer,
+                $serviceRequest,
+                $this->editPayload($serviceRequest),
+                [$this->realJpegFile()],
+                []
+            );
+        } catch (InvalidServiceRequestTransitionException $e) {
+            $thrown = $e;
+        }
+
+        $this->assertNotNull($thrown);
+        $this->assertSame(0, RequestPhoto::where('service_request_id', $serviceRequest->id)->count());
+        $this->assertEmpty(
+            Storage::disk(config('filesystems.default'))->allFiles('service-requests'),
+            'The newly uploaded photo should have been compensated away.'
+        );
+    }
+
+    public function test_match_level_recomputes_from_the_new_category_and_area_after_an_edit(): void
+    {
+        $originalCategory = Category::factory()->create();
+        $originalArea = Area::factory()->create();
+        $newCategory = Category::factory()->create();
+        $newArea = Area::factory()->create();
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create([
+            'category_id' => $originalCategory->id,
+            'area_id' => $originalArea->id,
+        ]);
+        $provider = $this->approvedProviderFor($newCategory, $newArea);
+
+        // Before the edit: the Provider is registered for neither the
+        // original category nor area -> no match.
+        $this->actingAs($provider)->get('/provider/requests')->assertInertia(
+            fn (Assert $page) => $page->where('requests.data.0.match_level', 'none')
+        );
+
+        $this->actingAs($customer)->patch("/requests/{$serviceRequest->id}", $this->editPayload($serviceRequest, [
+            'category_id' => $newCategory->id,
+            'area_id' => $newArea->id,
+        ]));
+
+        // After the edit: no cache/denormalized column to invalidate —
+        // match_level is always computed live, so the Feed reflects the
+        // new category/area on its very next render.
+        $this->actingAs($provider)->get('/provider/requests')->assertInertia(
+            fn (Assert $page) => $page->where('requests.data.0.match_level', 'full')
+        );
+    }
+
+    public function test_update_via_a_real_multipart_post_request_with_method_spoofing_succeeds(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+
+        // The frontend can't send a native multipart PATCH body (PHP can't
+        // parse one), so it POSTs with a spoofed _method field instead —
+        // this exercises that exact real HTTP shape, not just a
+        // Laravel-test-client ->patch() call (which handles the spoofing
+        // transparently and would not by itself prove the frontend's
+        // approach actually works end to end).
+        $response = $this->actingAs($customer)->post(
+            "/requests/{$serviceRequest->id}",
+            array_merge($this->editPayload($serviceRequest, ['title' => 'Spoofed multipart update']), [
+                '_method' => 'PATCH',
+                'photos' => [$this->realJpegFile()],
+            ])
+        );
+
+        $response->assertRedirect(route('requests.show', $serviceRequest));
+        $this->assertSame('Spoofed multipart update', $serviceRequest->fresh()->title);
+        $this->assertSame(1, RequestPhoto::where('service_request_id', $serviceRequest->id)->count());
     }
 }

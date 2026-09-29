@@ -68,6 +68,7 @@ describe('Requests/Show private info block', () => {
                 myOffer={null}
                 canOffer={false}
                 job={null}
+                can_edit={false}
             />,
         );
 
@@ -76,17 +77,33 @@ describe('Requests/Show private info block', () => {
     });
 
     it('shows nothing private when address_text is absent (feed/unmatched viewer shape)', () => {
-        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null} />);
+        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null}
+                can_edit={false} />);
 
         expect(screen.queryByText('123 Example Street')).not.toBeInTheDocument();
         expect(screen.queryByText(/coordinates/i)).not.toBeInTheDocument();
     });
 });
 
+describe('Requests/Show edit link', () => {
+    it('shows the edit link when can_edit is true', () => {
+        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null} can_edit={true} />);
+
+        expect(screen.getByRole('link', { name: 'Edit request' })).toHaveAttribute('href', '/requests/1/edit');
+    });
+
+    it('hides the edit link when can_edit is false', () => {
+        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null} can_edit={false} />);
+
+        expect(screen.queryByRole('link', { name: 'Edit request' })).not.toBeInTheDocument();
+    });
+});
+
 describe('Requests/Show match-level warning before sending an offer', () => {
     it('shows the mismatch warning for a partial match, without disabling the submit button', () => {
         asProviderViewer();
-        render(<Show request={baseRequest({ match_level: 'partial' })} myOffer={null} canOffer={true} job={null} />);
+        render(<Show request={baseRequest({ match_level: 'partial' })} myOffer={null} canOffer={true} job={null}
+                can_edit={false} />);
 
         expect(screen.getByText('This request does not fully match your registered categories/areas.')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Send offer' })).not.toBeDisabled();
@@ -94,14 +111,16 @@ describe('Requests/Show match-level warning before sending an offer', () => {
 
     it('shows the mismatch warning for no match at all', () => {
         asProviderViewer();
-        render(<Show request={baseRequest({ match_level: 'none' })} myOffer={null} canOffer={true} job={null} />);
+        render(<Show request={baseRequest({ match_level: 'none' })} myOffer={null} canOffer={true} job={null}
+                can_edit={false} />);
 
         expect(screen.getByText('This request does not fully match your registered categories/areas.')).toBeInTheDocument();
     });
 
     it('does not show a warning for a full match', () => {
         asProviderViewer();
-        render(<Show request={baseRequest({ match_level: 'full' })} myOffer={null} canOffer={true} job={null} />);
+        render(<Show request={baseRequest({ match_level: 'full' })} myOffer={null} canOffer={true} job={null}
+                can_edit={false} />);
 
         expect(screen.queryByText('This request does not fully match your registered categories/areas.')).not.toBeInTheDocument();
     });
@@ -118,7 +137,8 @@ describe('Requests/Show title/description translation toggle', () => {
     }
 
     it('shows the translation by default with the machine-translated badge', () => {
-        render(<Show request={completedRequest()} myOffer={null} canOffer={false} job={null} />);
+        render(<Show request={completedRequest()} myOffer={null} canOffer={false} job={null}
+                can_edit={false} />);
 
         expect(screen.getByText('[ja] Fix my leaking AC')).toBeInTheDocument();
         expect(screen.getByText('[ja] Water is dripping from the unit.')).toBeInTheDocument();
@@ -126,7 +146,8 @@ describe('Requests/Show title/description translation toggle', () => {
     });
 
     it('toggles the title and description together via a single button, and hides the badge while showing the original', () => {
-        render(<Show request={completedRequest()} myOffer={null} canOffer={false} job={null} />);
+        render(<Show request={completedRequest()} myOffer={null} canOffer={false} job={null}
+                can_edit={false} />);
 
         const toggle = screen.getByRole('button', { name: 'Show original' });
         expect(screen.getAllByRole('button', { name: /Show original|Show translation/ })).toHaveLength(1);
@@ -150,6 +171,7 @@ describe('Requests/Show title/description translation toggle', () => {
                 myOffer={null}
                 canOffer={false}
                 job={null}
+                can_edit={false}
             />,
         );
 
@@ -167,6 +189,7 @@ describe('Requests/Show title/description translation toggle', () => {
                 myOffer={null}
                 canOffer={false}
                 job={null}
+                can_edit={false}
             />,
         );
 
@@ -175,7 +198,8 @@ describe('Requests/Show title/description translation toggle', () => {
     });
 
     it('shows no badge, status text, or toggle when the viewer locale matches the source locale', () => {
-        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null} />);
+        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null}
+                can_edit={false} />);
 
         expect(screen.queryByText('(machine-translated)')).not.toBeInTheDocument();
         expect(screen.queryByText('Translation in progress')).not.toBeInTheDocument();

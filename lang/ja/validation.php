@@ -23,6 +23,7 @@ return [
     'date' => ':attribute には有効な日時を入力してください。',
     'file' => ':attribute はファイルを指定してください。',
     'phone_number' => ':attribute の形式が正しくありません。数字・半角スペース・-・()・先頭の+のみ使用できます。',
+    'photo_limit_exceeded' => '依頼に登録できる写真は最大:max枚までです。',
 
     'between' => [
         'numeric' => ':attribute は :min から :max の間で入力してください。',
