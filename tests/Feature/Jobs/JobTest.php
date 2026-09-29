@@ -6,6 +6,8 @@ use App\Actions\Job\CancelJobAction;
 use App\Actions\Job\ConfirmJobCompletionAction;
 use App\Actions\Job\ReportJobCompletionAction;
 use App\Actions\Job\StartJobAction;
+use App\Actions\Provider\UpdateProviderProfileAction;
+use App\Enums\ProviderVerificationStatus;
 use App\Enums\ServiceJobStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Exceptions\InvalidJobTransitionException;
@@ -20,6 +22,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class JobTest extends TestCase
@@ -214,6 +217,84 @@ class JobTest extends TestCase
 
         $this->actingAs($rejectedProvider)->get("/requests/{$serviceRequest->id}")->assertInertia(
             fn (Assert $page) => $page->missing('request.address_text')->missing('request.lat')->missing('request.lng')
+        );
+    }
+
+    public function test_job_resource_includes_provider_verification_status(): void
+    {
+        $job = $this->createAssignedJob();
+
+        $this->actingAs($job->customer)->get("/jobs/{$job->id}")->assertInertia(
+            fn (Assert $page) => $page->where('job.provider.verification_status', 'approved')
+        );
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function nonApprovedVerificationStatusProvider(): array
+    {
+        return [
+            'pending' => ['pending'],
+            'rejected' => ['rejected'],
+            'suspended' => ['suspended'],
+        ];
+    }
+
+    /**
+     * JobPolicy must never gain a verification-status check: an already
+     * assigned Job has to keep working regardless of what later happens to
+     * the Provider's profile (edited back to pending, rejected on
+     * re-review, even suspended) — this pins that down for every status
+     * other than approved, not just the pending-via-edit case.
+     */
+    #[DataProvider('nonApprovedVerificationStatusProvider')]
+    public function test_provider_can_still_start_an_assigned_job_regardless_of_current_verification_status(string $status): void
+    {
+        $job = $this->createAssignedJob();
+        $job->provider->providerProfile->verification_status = ProviderVerificationStatus::from($status);
+        $job->provider->providerProfile->save();
+
+        $response = $this->actingAs($job->provider)->patch("/jobs/{$job->id}/start");
+
+        $response->assertRedirect(route('jobs.show', $job));
+        $this->assertSame(ServiceJobStatus::InProgress, $job->fresh()->status);
+    }
+
+    public function test_existing_job_continues_through_its_full_lifecycle_after_provider_edits_an_approved_profile_back_to_pending(): void
+    {
+        $job = $this->createAssignedJob();
+        $provider = $job->provider;
+        $profile = $provider->providerProfile;
+        $category = $profile->categories()->first();
+        $area = $profile->areas()->first();
+
+        // The real feature under test, not just a manual enum flip: editing
+        // an approved profile sends it back to pending.
+        app(UpdateProviderProfileAction::class)->handle($provider, $profile, [
+            'business_name' => 'Updated Business Name',
+            'bio' => null,
+            'category_ids' => [$category->id],
+            'area_ids' => [$area->id],
+            'other_service_details' => null,
+        ]);
+        $this->assertSame(ProviderVerificationStatus::Pending, $profile->fresh()->verification_status);
+
+        $this->actingAs($provider)->patch("/jobs/{$job->id}/start")->assertRedirect(route('jobs.show', $job));
+        $this->assertSame(ServiceJobStatus::InProgress, $job->fresh()->status);
+
+        $this->actingAs($provider)->patch("/jobs/{$job->id}/report-completion")->assertRedirect(route('jobs.show', $job));
+        $this->assertSame(ServiceJobStatus::AwaitingConfirmation, $job->fresh()->status);
+
+        $this->actingAs($job->customer)->patch("/jobs/{$job->id}/confirm-completion")->assertRedirect(route('jobs.show', $job));
+        $job->refresh();
+        $this->assertSame(ServiceJobStatus::Completed, $job->status);
+        $this->assertSame(1, $provider->providerProfile->fresh()->completed_jobs_count);
+
+        // The Job screens themselves must still be reachable and correct
+        // throughout — not just the state-changing endpoints.
+        $this->actingAs($job->customer)->get("/jobs/{$job->id}")->assertInertia(
+            fn (Assert $page) => $page->where('job.status', 'completed')->where('job.provider.verification_status', 'pending')
         );
     }
 

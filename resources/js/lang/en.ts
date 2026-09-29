@@ -209,6 +209,12 @@ const en = {
     'provider.profile.avg_rating': 'Average rating',
     'provider.profile.completed_jobs': 'Completed jobs',
     'provider.profile.submit': 'Submit for review',
+    'provider.profile.approved_edit_notice':
+        "Editing your profile sends it back for review. Until it's approved again, you won't appear in the Feed or receive new offers — but your existing jobs continue as normal.",
+    'provider.profile.approved_edit_confirm_body':
+        "Are you sure? Your profile will go back to pending review, and you won't appear in the Feed or receive new offers until it's approved again.",
+    'provider.profile.inactive_retained_heading': 'Currently registered (no longer accepting new applications)',
+    'provider.profile.pending_review_badge': 'Profile under re-review',
 
     'jobs.index.title': 'My jobs',
     'jobs.index.empty': 'No jobs yet.',

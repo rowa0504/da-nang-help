@@ -11,6 +11,7 @@ import { Textarea } from '@/Components/Textarea';
 import { Checkbox } from '@/Components/Checkbox';
 import { Button } from '@/Components/Button';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useConfirm } from '@/hooks/useConfirm';
 import { TranslationKey } from '@/lang/en';
 
 interface Props {
@@ -54,7 +55,11 @@ const VERIFICATION_STATUS_VARIANTS: Record<ProviderVerificationStatus, BadgeVari
 };
 
 export default function Profile({ profile, categories, areas }: Props) {
-    const isEditable = profile === null || profile.verification_status === 'rejected';
+    // Editable from every state except Suspended: a new applicant, a
+    // Pending profile (edit further while still under initial review), a
+    // Rejected one (resubmit), and now also an Approved one (edit, which
+    // sends it back for re-review — see EditableForm's confirmation step).
+    const isEditable = profile === null || profile.verification_status !== 'suspended';
 
     if (!isEditable) {
         return <ReadOnlyStatus profile={profile as ProviderProfileData} />;
@@ -127,7 +132,8 @@ function ReadOnlyStatus({ profile }: { profile: ProviderProfileData }) {
 
 function EditableForm({ profile, categories, areas }: { profile: ProviderProfileData | null; categories: CategoryOption[]; areas: AreaOption[] }) {
     const { t } = useTranslation();
-    const { data, setData, post, processing, errors } = useForm<ProfileForm>({
+    const { confirm, confirmDialog } = useConfirm();
+    const { data, setData, post, patch, processing, errors } = useForm<ProfileForm>({
         business_name: profile?.business_name ?? '',
         bio: profile?.bio ?? '',
         category_ids: profile?.category_ids ?? [],
@@ -135,9 +141,24 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
         other_service_details: profile?.other_service_details ?? '',
     });
 
-    function submit(e: FormEvent) {
+    async function submit(e: FormEvent) {
         e.preventDefault();
-        post('/provider/profile');
+
+        if (profile?.verification_status === 'approved') {
+            const ok = await confirm({
+                title: t('common.confirm'),
+                body: t('provider.profile.approved_edit_confirm_body'),
+            });
+            if (!ok) {
+                return;
+            }
+        }
+
+        if (profile === null) {
+            post('/provider/profile');
+        } else {
+            patch('/provider/profile');
+        }
     }
 
     function toggle(field: 'category_ids' | 'area_ids', id: number) {
@@ -148,12 +169,43 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
     const otherCategoryId = categories.find((category) => category.slug === 'other')?.id;
     const isOtherCategorySelected = otherCategoryId !== undefined && data.category_ids.includes(otherCategoryId);
 
+    // Categories/areas this profile is already attached to, but that an
+    // Admin has since deactivated: still shown (and still toggle-able, via
+    // the same `toggle()` used for the active picker above) so the Provider
+    // can see and choose to keep or remove them — they just aren't offered
+    // as a *new* selection since they're absent from the active `categories`
+    // prop. Once unchecked and saved, the server's validation only allows an
+    // inactive id through when it was already attached *before* this
+    // submission, so it can't be re-added afterward.
+    const activeCategoryIds = new Set(categories.map((category) => category.id));
+    const inactiveRetainedCategories = profile
+        ? profile.category_ids
+              .map((id, index) => ({ id, name: profile.category_names[index] }))
+              .filter((category) => !activeCategoryIds.has(category.id))
+        : [];
+    const activeAreaIds = new Set(areas.map((area) => area.id));
+    const inactiveRetainedAreas = profile
+        ? profile.area_ids.map((id, index) => ({ id, name: profile.area_names[index] })).filter((area) => !activeAreaIds.has(area.id))
+        : [];
+
     return (
         <AppLayout>
             <div className="mx-auto max-w-xl p-4 sm:p-6">
                 <Head title={t('provider.profile.title')} />
-                <PageHeader title={profile ? t('provider.profile.heading_update') : t('provider.profile.heading_setup')} />
+                <PageHeader
+                    title={profile ? t('provider.profile.heading_update') : t('provider.profile.heading_setup')}
+                    actions={
+                        profile && (
+                            <Badge variant={VERIFICATION_STATUS_VARIANTS[profile.verification_status]}>
+                                {t(VERIFICATION_STATUS_KEYS[profile.verification_status])}
+                            </Badge>
+                        )
+                    }
+                />
                 {profile?.verification_status === 'rejected' && <p className="mt-2 text-sm text-red-600">{t('provider.profile.rejected_notice')}</p>}
+                {profile?.verification_status === 'approved' && (
+                    <p className="mt-2 text-sm text-amber-700">{t('provider.profile.approved_edit_notice')}</p>
+                )}
 
                 <form onSubmit={submit} className="mt-6 flex flex-col gap-4">
                     <FormField label={t('provider.profile.business_name')} htmlFor="business_name" error={errors.business_name}>
@@ -176,6 +228,21 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
                                 />
                             ))}
                         </div>
+                        {inactiveRetainedCategories.length > 0 && (
+                            <div className="mt-3">
+                                <p className="text-xs font-medium text-gray-500">{t('provider.profile.inactive_retained_heading')}</p>
+                                <div className="mt-1 flex flex-col gap-2">
+                                    {inactiveRetainedCategories.map((category) => (
+                                        <Checkbox
+                                            key={category.id}
+                                            label={category.name}
+                                            checked={data.category_ids.includes(category.id)}
+                                            onChange={() => toggle('category_ids', category.id)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         {errors.category_ids && <p className="mt-1 text-sm text-red-600">{errors.category_ids}</p>}
                     </fieldset>
 
@@ -206,6 +273,21 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
                                 />
                             ))}
                         </div>
+                        {inactiveRetainedAreas.length > 0 && (
+                            <div className="mt-3">
+                                <p className="text-xs font-medium text-gray-500">{t('provider.profile.inactive_retained_heading')}</p>
+                                <div className="mt-1 flex flex-col gap-2">
+                                    {inactiveRetainedAreas.map((area) => (
+                                        <Checkbox
+                                            key={area.id}
+                                            label={area.name}
+                                            checked={data.area_ids.includes(area.id)}
+                                            onChange={() => toggle('area_ids', area.id)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                         {errors.area_ids && <p className="mt-1 text-sm text-red-600">{errors.area_ids}</p>}
                     </fieldset>
 
@@ -213,6 +295,8 @@ function EditableForm({ profile, categories, areas }: { profile: ProviderProfile
                         {t('provider.profile.submit')}
                     </Button>
                 </form>
+
+                {confirmDialog}
             </div>
         </AppLayout>
     );

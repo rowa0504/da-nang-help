@@ -5,9 +5,11 @@ namespace Tests\Feature\Admin;
 use App\Actions\Admin\ApproveProviderAction;
 use App\Actions\Admin\RejectProviderAction;
 use App\Actions\Admin\SuspendProviderAction;
+use App\Actions\Provider\UpdateProviderProfileAction;
 use App\Enums\ProviderVerificationStatus;
 use App\Enums\ServiceJobStatus;
 use App\Exceptions\InvalidProviderVerificationTransitionException;
+use App\Models\Area;
 use App\Models\Category;
 use App\Models\CategoryTranslation;
 use App\Models\ProviderProfile;
@@ -33,6 +35,43 @@ class ProviderReviewTest extends TestCase
 
         $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Admin/Providers/Show')
+        );
+    }
+
+    /**
+     * No new history column was added when the Provider-edit feature was
+     * built: approved_at/rejected_at/suspended_at/verification_note are all
+     * cleared uniformly on every edit, so a profile that was previously
+     * approved and then edited is genuinely indistinguishable, server-side,
+     * from a first-time pending application. The pending list/detail must
+     * not claim otherwise — this pins down that it doesn't.
+     */
+    public function test_a_previously_approved_profile_edited_back_to_pending_appears_as_plain_pending(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $provider = User::factory()->provider()->create();
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $profile = ProviderProfile::factory()->forUser($provider)->approved()->create();
+        $profile->categories()->attach($category);
+        $profile->areas()->attach($area);
+
+        app(UpdateProviderProfileAction::class)->handle($provider, $profile, [
+            'business_name' => 'Updated Business Name',
+            'bio' => null,
+            'category_ids' => [$category->id],
+            'area_ids' => [$area->id],
+            'other_service_details' => null,
+        ]);
+
+        $this->actingAs($admin)->get('/admin/providers')->assertInertia(
+            fn (Assert $page) => $page->has('profiles', 1)
+        );
+        $this->actingAs($admin)->get("/admin/providers/{$profile->id}")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('profile.verification_status', 'pending')
+                ->missing('profile.previously_approved')
+                ->missing('profile.is_reapplication')
         );
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\ProviderVerificationStatus;
 use App\Enums\UserRole;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,17 @@ class OfferResource extends JsonResource
         // sent to the client) when this Offer's own request was posted
         // under the "other" category.
         $isOtherCategoryRequest = $this->serviceRequest->category->slug === 'other';
+        $providerVerificationStatus = $this->provider->providerProfile?->verification_status;
+        $providerIsApproved = $providerVerificationStatus === ProviderVerificationStatus::Approved;
+        // A Provider can edit their own approved profile back to Pending
+        // (see UpdateProviderProfileAction) without any snapshot of the
+        // previously-approved text — so other_service_details can now hold
+        // content an Admin hasn't reviewed yet. Withhold it from the
+        // Customer whenever the Provider isn't currently Approved; the
+        // Provider (viewing their own Offer) and Admin still see it
+        // regardless, since they have legitimate reason to (the Provider
+        // wrote it, Admin needs it to review).
+        $showOtherServiceDetails = $isOtherCategoryRequest && ($providerIsApproved || $isOwnerOrAdmin);
 
         return [
             'id' => $this->id,
@@ -45,7 +57,8 @@ class OfferResource extends JsonResource
                 'business_name' => $this->provider->providerProfile?->business_name,
                 'avg_rating' => $this->provider->providerProfile?->avg_rating ?? '0.00',
                 'completed_jobs_count' => $this->provider->providerProfile?->completed_jobs_count ?? 0,
-                'other_service_details' => $isOtherCategoryRequest ? $this->provider->providerProfile?->other_service_details : null,
+                'verification_status' => $providerVerificationStatus?->value,
+                'other_service_details' => $showOtherServiceDetails ? $this->provider->providerProfile?->other_service_details : null,
             ],
             ...$isOwnerOrAdmin ? [
                 'original_message' => $this->message,

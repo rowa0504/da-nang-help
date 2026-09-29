@@ -68,6 +68,11 @@ export default function Index({ jobs }: Props) {
                                         customer: job.customer.name,
                                         provider: job.provider.business_name ?? job.provider.name,
                                     })}
+                                    {job.provider.verification_status === 'pending' && (
+                                        <span className="ml-2 inline-block">
+                                            <Badge variant="warning">{t('provider.profile.pending_review_badge')}</Badge>
+                                        </span>
+                                    )}
                                 </p>
                                 <p className="mt-2">
                                     <Link href={`/jobs/${job.id}`} className="text-brand-600 underline hover:text-brand-700">

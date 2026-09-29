@@ -26,7 +26,9 @@ class ProviderProfilePolicy
     }
 
     /**
-     * Gate for /provider/profile (GET + POST): only Provider-role users may
+     * Gate for /provider/profile GET (show, any state) and POST (submit — a
+     * brand-new profile only; SubmitProviderProfileAction itself rejects
+     * the case where one already exists). Only Provider-role users may
      * reach it at all. This route never takes an {id}, so there is no other
      * Provider's profile it could be pointed at — the URL design itself
      * prevents cross-Provider access; this ability only needs to check role.
@@ -34,6 +36,22 @@ class ProviderProfilePolicy
     public function create(User $user): bool
     {
         return $user->role === UserRole::Provider;
+    }
+
+    /**
+     * Gate for /provider/profile PATCH (editing an *existing* profile from
+     * Pending, Rejected, or Approved). Unlike create() above, this route
+     * still takes no {id} — the Controller resolves $request->user()'s own
+     * profile before calling $this->authorize('update', $profile) — so this
+     * ability is the one place that must explicitly re-check ownership
+     * rather than relying on the URL shape alone. UpdateProviderProfileAction
+     * re-verifies all three conditions again after acquiring a row lock.
+     */
+    public function update(User $user, ProviderProfile $profile): bool
+    {
+        return $user->id === $profile->user_id
+            && $user->role === UserRole::Provider
+            && $profile->verification_status !== ProviderVerificationStatus::Suspended;
     }
 
     /**

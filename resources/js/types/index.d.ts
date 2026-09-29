@@ -148,8 +148,11 @@ export interface OfferData {
         business_name: string | null;
         avg_rating: string;
         completed_jobs_count: number;
+        verification_status: ProviderVerificationStatus | null;
         // Only ever non-null when this Offer's own request's category is
-        // "other" — minimized server-side, not just hidden by the frontend.
+        // "other" AND the provider is currently approved (for the Customer
+        // viewer — the offering Provider/Admin see it regardless) —
+        // minimized server-side, not just hidden by the frontend.
         other_service_details: string | null;
     };
     // Present only for the offering Provider themself or an Admin.
@@ -175,7 +178,7 @@ export interface JobData {
     // same note on ServiceRequestData above.
     service_request: { id: number; title: string; address_text: string; lat: number | null; lng: number | null };
     customer: { name: string; phone: string | null };
-    provider: { name: string; phone: string | null; business_name: string | null };
+    provider: { name: string; phone: string | null; business_name: string | null; verification_status: ProviderVerificationStatus | null };
     // null if no review yet, or if a hidden review is being withheld from
     // this viewer (the Provider being reviewed never sees a hidden one).
     review: ReviewData | null;

@@ -1,0 +1,61 @@
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import Index from '@/Pages/Jobs/Index';
+import { JobData, PaginatedData } from '@/types';
+
+vi.mock('@inertiajs/react', () => ({
+    Head: () => null,
+    usePage: () => ({ url: '/jobs', props: { locale: 'en', auth: { user: { role: 'customer' } }, flash: { status: null, warning: null } } }),
+    Link: ({ href, children }: Record<string, unknown> & { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>,
+    router: { on: vi.fn(() => () => {}) },
+}));
+
+function job(overrides: Partial<JobData> = {}): JobData {
+    return {
+        id: 1,
+        agreed_price: '150.00',
+        currency: 'USD',
+        status: 'assigned',
+        provider_completed_at: null,
+        customer_confirmed_at: null,
+        auto_confirm_at: null,
+        completed_at: null,
+        cancelled_at: null,
+        created_at: '2026-01-01T00:00:00Z',
+        service_request: { id: 1, title: 'Fix my sink', address_text: '123 Main St', lat: null, lng: null },
+        customer: { name: 'Jane Doe', phone: null },
+        provider: { name: 'John Smith', phone: null, business_name: 'Fixit Co.', verification_status: 'approved' },
+        review: null,
+        ...overrides,
+    };
+}
+
+function paginated(items: JobData[]): PaginatedData<JobData> {
+    return {
+        data: items,
+        links: { first: null, last: null, prev: null, next: null },
+        meta: { current_page: 1, from: 1, last_page: 1, links: [], path: '/jobs', per_page: 20, to: items.length, total: items.length },
+    };
+}
+
+describe('Jobs/Index provider verification status badge', () => {
+    it('shows the "under re-review" badge when the provider is pending', () => {
+        render(<Index jobs={paginated([job({ provider: { name: 'John Smith', phone: null, business_name: 'Fixit Co.', verification_status: 'pending' } })])} />);
+
+        expect(screen.getByText('Profile under re-review')).toBeInTheDocument();
+    });
+
+    it('does not show the badge when the provider is approved', () => {
+        render(<Index jobs={paginated([job()])} />);
+
+        expect(screen.queryByText('Profile under re-review')).not.toBeInTheDocument();
+    });
+
+    // The badge is Pending-only under the current spec — rejected and
+    // suspended providers with an existing job must not show it either.
+    it.each([['rejected'], ['suspended']] as const)('does not show the badge when the provider is %s', (status) => {
+        render(<Index jobs={paginated([job({ provider: { name: 'John Smith', phone: null, business_name: 'Fixit Co.', verification_status: status } })])} />);
+
+        expect(screen.queryByText('Profile under re-review')).not.toBeInTheDocument();
+    });
+});

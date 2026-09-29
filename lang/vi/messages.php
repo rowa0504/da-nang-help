@@ -11,4 +11,5 @@ return [
     'area_created' => 'Đã tạo khu vực.',
     'area_updated' => 'Đã cập nhật khu vực.',
     'provider_profile_submitted' => 'Hồ sơ nhà cung cấp của bạn đã được gửi để xét duyệt.',
+    'provider_profile_updated' => 'Các thay đổi của bạn đã được gửi để xét duyệt.',
 ];

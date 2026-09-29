@@ -7,6 +7,7 @@ use App\Actions\Offer\RejectOfferAction;
 use App\Actions\Offer\UpdateOfferAction;
 use App\Actions\Offer\WithdrawOfferAction;
 use App\Enums\OfferStatus;
+use App\Enums\ProviderVerificationStatus;
 use App\Enums\ServiceRequestStatus;
 use App\Enums\TranslationStatus;
 use App\Enums\UserRole;
@@ -283,6 +284,74 @@ class OfferTest extends TestCase
             fn (Assert $page) => $page
                 ->where('serviceRequest.category_slug', $category->slug)
                 ->where('offers.data.0.provider.other_service_details', null)
+        );
+    }
+
+    public function test_offer_resource_includes_provider_verification_status(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page->where('offers.data.0.provider.verification_status', 'approved')
+        );
+    }
+
+    public function test_customer_does_not_see_other_service_details_when_provider_is_no_longer_approved(): void
+    {
+        // Providers can edit an approved profile back to pending (see
+        // UpdateProviderProfileAction) with no snapshot of the previously
+        // reviewed text, so other_service_details must be withheld from the
+        // Customer whenever the offering Provider isn't currently approved
+        // — even though this same Offer was created while they were.
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $other->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($other, $area);
+        $provider->providerProfile->other_service_details = 'Custom furniture repair';
+        $provider->providerProfile->save();
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        $provider->providerProfile->verification_status = ProviderVerificationStatus::Pending;
+        $provider->providerProfile->save();
+
+        $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page
+                ->where('offers.data.0.provider.verification_status', 'pending')
+                ->where('offers.data.0.provider.other_service_details', null)
+        );
+    }
+
+    public function test_provider_and_admin_still_see_own_other_service_details_when_not_approved(): void
+    {
+        $other = Category::query()->where('slug', 'other')->firstOrFail();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $other->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($other, $area);
+        $provider->providerProfile->other_service_details = 'Custom furniture repair';
+        $provider->providerProfile->save();
+        Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        // Cancel the request first: ServiceRequestPolicy::view() only lets
+        // a Provider view a still-*open* request while they're currently
+        // Approved (unrelated to this feature) — once cancelled/assigned,
+        // it instead allows any Provider who already holds an offer on it,
+        // regardless of their current verification_status, which is the
+        // combination this test actually needs to reach myOffer at all.
+        $this->actingAs($serviceRequest->customer)->patch("/requests/{$serviceRequest->id}/cancel");
+
+        $provider->providerProfile->verification_status = ProviderVerificationStatus::Pending;
+        $provider->providerProfile->save();
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($provider)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('myOffer.provider.other_service_details', 'Custom furniture repair')
+        );
+        $this->actingAs($admin)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
+            fn (Assert $page) => $page->where('offers.data.0.provider.other_service_details', 'Custom furniture repair')
         );
     }
 

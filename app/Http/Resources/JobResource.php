@@ -53,6 +53,7 @@ class JobResource extends JsonResource
                 'name' => $this->provider->name,
                 'phone' => $this->provider->phone,
                 'business_name' => $this->provider->providerProfile?->business_name,
+                'verification_status' => $this->provider->providerProfile?->verification_status?->value,
             ],
             'review' => ($review !== null && ! $hideReviewFromViewer) ? [
                 'id' => $review->id,

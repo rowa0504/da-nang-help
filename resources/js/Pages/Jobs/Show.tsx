@@ -139,6 +139,11 @@ export default function Show({ job }: Props) {
                             <dd className="text-gray-800">
                                 {job.provider.business_name ?? job.provider.name}
                                 {job.provider.phone ? ` (${job.provider.phone})` : ''}
+                                {job.provider.verification_status === 'pending' && (
+                                    <span className="ml-2 inline-block">
+                                        <Badge variant="warning">{t('provider.profile.pending_review_badge')}</Badge>
+                                    </span>
+                                )}
                             </dd>
                         </div>
                     </dl>

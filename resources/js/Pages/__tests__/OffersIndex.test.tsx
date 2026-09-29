@@ -20,7 +20,7 @@ function offer(overrides: Partial<OfferData> = {}): OfferData {
         available_at: null,
         status: 'pending',
         created_at: '2026-01-01T00:00:00Z',
-        provider: { id: 1, business_name: 'Fixit Co.', avg_rating: '4.50', completed_jobs_count: 3, other_service_details: null },
+        provider: { id: 1, business_name: 'Fixit Co.', avg_rating: '4.50', completed_jobs_count: 3, verification_status: 'approved', other_service_details: null },
         ...overrides,
     };
 }
@@ -40,7 +40,14 @@ describe('Requests/Offers/Index other_service_details display', () => {
                 serviceRequest={{ id: 1, title: 'Need something odd', category_slug: 'other' }}
                 offers={paginated([
                     offer({
-                        provider: { id: 1, business_name: 'Fixit Co.', avg_rating: '4.50', completed_jobs_count: 3, other_service_details: 'Custom furniture repair' },
+                        provider: {
+                            id: 1,
+                            business_name: 'Fixit Co.',
+                            avg_rating: '4.50',
+                            completed_jobs_count: 3,
+                            verification_status: 'approved',
+                            other_service_details: 'Custom furniture repair',
+                        },
                     }),
                 ])}
             />,
@@ -54,7 +61,14 @@ describe('Requests/Offers/Index other_service_details display', () => {
                 serviceRequest={{ id: 1, title: 'Fix my sink', category_slug: 'plumbing' }}
                 offers={paginated([
                     offer({
-                        provider: { id: 1, business_name: 'Fixit Co.', avg_rating: '4.50', completed_jobs_count: 3, other_service_details: 'Should not show' },
+                        provider: {
+                            id: 1,
+                            business_name: 'Fixit Co.',
+                            avg_rating: '4.50',
+                            completed_jobs_count: 3,
+                            verification_status: 'approved',
+                            other_service_details: 'Should not show',
+                        },
                     }),
                 ])}
             />,
@@ -65,6 +79,34 @@ describe('Requests/Offers/Index other_service_details display', () => {
     it('hides the row when there is no value, even under the "other" category', () => {
         render(<Index serviceRequest={{ id: 1, title: 'Need something odd', category_slug: 'other' }} offers={paginated([offer()])} />);
         expect(screen.queryByText('Other service details:', { exact: false })).not.toBeInTheDocument();
+    });
+});
+
+describe('Requests/Offers/Index provider verification status badge', () => {
+    it('shows the "under re-review" badge when the provider is pending', () => {
+        render(
+            <Index
+                serviceRequest={{ id: 1, title: 'Fix my sink', category_slug: 'plumbing' }}
+                offers={paginated([
+                    offer({
+                        provider: {
+                            id: 1,
+                            business_name: 'Fixit Co.',
+                            avg_rating: '4.50',
+                            completed_jobs_count: 3,
+                            verification_status: 'pending',
+                            other_service_details: null,
+                        },
+                    }),
+                ])}
+            />,
+        );
+        expect(screen.getByText('Profile under re-review')).toBeInTheDocument();
+    });
+
+    it('does not show the badge when the provider is approved', () => {
+        render(<Index serviceRequest={{ id: 1, title: 'Fix my sink', category_slug: 'plumbing' }} offers={paginated([offer()])} />);
+        expect(screen.queryByText('Profile under re-review')).not.toBeInTheDocument();
     });
 });
 

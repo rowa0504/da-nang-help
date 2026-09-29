@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Provider;
 
 use App\Actions\Provider\SubmitProviderProfileAction;
+use App\Actions\Provider\UpdateProviderProfileAction;
 use App\Exceptions\InvalidProviderVerificationTransitionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Provider\SubmitProviderProfileRequest;
@@ -72,5 +73,28 @@ class ProviderProfileController extends Controller
         }
 
         return redirect()->route('dashboard')->with('status', __('messages.provider_profile_submitted'));
+    }
+
+    public function update(SubmitProviderProfileRequest $request, UpdateProviderProfileAction $action): RedirectResponse
+    {
+        // No route-model-binding here (this route takes no {id}): resolve
+        // the caller's own profile first, then authorize against that
+        // specific instance — 'update' checks ownership, role, and
+        // not-suspended, all re-verified again inside the Action itself
+        // after it acquires a row lock.
+        $profile = $request->user()->providerProfile;
+        if ($profile === null) {
+            abort(404);
+        }
+
+        $this->authorize('update', $profile);
+
+        try {
+            $action->handle($request->user(), $profile, $request->validated());
+        } catch (InvalidProviderVerificationTransitionException $e) {
+            return back()->withErrors(['business_name' => $e->getMessage()]);
+        }
+
+        return redirect()->route('provider.profile.show')->with('status', __('messages.provider_profile_updated'));
     }
 }

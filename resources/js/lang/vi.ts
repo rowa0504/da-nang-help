@@ -212,6 +212,12 @@ const vi: TranslationDictionary = {
     'provider.profile.avg_rating': 'Đánh giá trung bình',
     'provider.profile.completed_jobs': 'Công việc đã hoàn thành',
     'provider.profile.submit': 'Gửi để xét duyệt',
+    'provider.profile.approved_edit_notice':
+        'Chỉnh sửa hồ sơ sẽ gửi lại để xét duyệt. Cho đến khi được phê duyệt lại, bạn sẽ không xuất hiện trên Feed hoặc nhận offer mới — nhưng các công việc hiện có vẫn tiếp tục bình thường.',
+    'provider.profile.approved_edit_confirm_body':
+        'Bạn có chắc chắn không? Hồ sơ của bạn sẽ quay lại trạng thái chờ xét duyệt, và bạn sẽ không xuất hiện trên Feed hoặc nhận offer mới cho đến khi được phê duyệt lại.',
+    'provider.profile.inactive_retained_heading': 'Đang đăng ký hiện tại (không còn nhận đăng ký mới)',
+    'provider.profile.pending_review_badge': 'Hồ sơ đang được xét duyệt lại',
 
     'jobs.index.title': 'Công việc của tôi',
     'jobs.index.empty': 'Chưa có công việc nào.',

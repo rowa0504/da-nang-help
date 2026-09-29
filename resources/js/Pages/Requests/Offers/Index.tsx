@@ -106,6 +106,11 @@ export default function Index({ serviceRequest, offers }: Props) {
                                         rating: offer.provider.avg_rating,
                                         count: offer.provider.completed_jobs_count,
                                     })}
+                                    {offer.provider.verification_status === 'pending' && (
+                                        <span className="ml-2 inline-block">
+                                            <Badge variant="warning">{t('provider.profile.pending_review_badge')}</Badge>
+                                        </span>
+                                    )}
                                 </p>
                                 {serviceRequest.category_slug === 'other' && offer.provider.other_service_details && (
                                     <p className="mt-1 text-sm text-gray-600">

@@ -13,7 +13,12 @@ use Illuminate\Support\Facades\DB;
 class SubmitProviderProfileAction
 {
     /**
-     * Create a new provider_profiles row, or resubmit a rejected one.
+     * Create a brand-new provider_profiles row for a Provider who doesn't
+     * have one yet. Editing an existing profile (from Pending, Rejected, or
+     * Approved) is UpdateProviderProfileAction's job, not this one's — kept
+     * separate so each Action's authorization story stays simple: this one
+     * only ever needs "no profile exists yet", the other only ever needs
+     * "this profile belongs to the caller and isn't suspended".
      *
      * @param  array{business_name: string, bio: ?string, category_ids: array<int>, area_ids: array<int>, other_service_details: ?string}  $data
      */
@@ -35,26 +40,17 @@ class SubmitProviderProfileAction
                 );
             }
 
-            $profile = $lockedUser->providerProfile()->first();
-
-            $isNew = $profile === null;
-            $isResubmission = $profile !== null && $profile->verification_status === ProviderVerificationStatus::Rejected;
-
-            if (! $isNew && ! $isResubmission) {
+            if ($lockedUser->providerProfile()->exists()) {
                 throw new InvalidProviderVerificationTransitionException(
-                    'A provider profile can only be submitted when none exists yet, or resubmitted while rejected.'
+                    'A provider profile already exists for this user; edit it instead of submitting a new one.'
                 );
             }
 
-            if ($isNew) {
-                $profile = new ProviderProfile();
-                $profile->user_id = $lockedUser->id;
-            }
-
+            $profile = new ProviderProfile();
+            $profile->user_id = $lockedUser->id;
             $profile->business_name = $data['business_name'];
             $profile->bio = $data['bio'] ?? null;
             $profile->verification_status = ProviderVerificationStatus::Pending;
-            $profile->rejected_at = null;
             // Never trust the submitted other_service_details value on its
             // own: whether it is kept or forced to null is decided from the
             // *validated* category_ids, not from whether the field itself
@@ -62,9 +58,6 @@ class SubmitProviderProfileAction
             $profile->other_service_details = $this->isOtherCategorySelected($data['category_ids'])
                 ? $data['other_service_details']
                 : null;
-            // verification_note is deliberately left untouched: on
-            // resubmission it retains the previous rejection reason as
-            // Admin-internal history until the next reject overwrites it.
             $profile->save();
 
             $profile->categories()->sync($data['category_ids']);

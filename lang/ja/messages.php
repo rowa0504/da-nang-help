@@ -11,4 +11,5 @@ return [
     'area_created' => 'エリアを作成しました。',
     'area_updated' => 'エリアを更新しました。',
     'provider_profile_submitted' => 'Providerプロフィールを審査のために送信しました。',
+    'provider_profile_updated' => '変更内容を審査のために送信しました。',
 ];
