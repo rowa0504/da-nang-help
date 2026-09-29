@@ -9,7 +9,7 @@ return [
     ],
     'offer_accepted' => [
         'subject' => 'Báo giá của bạn cho ":title" đã được chấp nhận',
-        'body' => 'Customer đã chấp nhận báo giá của bạn cho ":title". Bạn có thể xem thông tin liên hệ trên trang Job.',
+        'body' => 'Khách hàng đã chấp nhận báo giá của bạn cho ":title". Bạn có thể xem thông tin liên hệ trên trang công việc.',
     ],
     'job_completion_reported' => [
         'subject' => 'Provider đã báo hoàn thành cho ":title"',

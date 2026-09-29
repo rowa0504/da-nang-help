@@ -98,11 +98,11 @@ describe('Provider/Profile editing an approved profile', () => {
 
     it('shows the approved-edit notice banner only when the current status is approved', () => {
         const { unmount } = render(<Profile profile={editableProfile({ verification_status: 'approved' })} categories={categories} areas={areas} />);
-        expect(screen.getByText(/Editing your profile sends it back for review/)).toBeInTheDocument();
+        expect(screen.getByText(/Editing your profile will send it back for review/)).toBeInTheDocument();
         unmount();
 
         render(<Profile profile={editableProfile({ verification_status: 'pending' })} categories={categories} areas={areas} />);
-        expect(screen.queryByText(/Editing your profile sends it back for review/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Editing your profile will send it back for review/)).not.toBeInTheDocument();
     });
 
     it('shows a confirmation dialog before submitting, and only calls patch() after confirming', async () => {
@@ -110,7 +110,7 @@ describe('Provider/Profile editing an approved profile', () => {
 
         fireEvent.submit(screen.getByRole('button', { name: 'Submit for review' }).closest('form') as HTMLFormElement);
 
-        const confirmBody = await screen.findByText(/Your profile will go back to pending review/);
+        const confirmBody = await screen.findByText(/Saving these changes will send your profile back for review/);
         expect(confirmBody).toBeInTheDocument();
         expect(mockPatch).not.toHaveBeenCalled();
 

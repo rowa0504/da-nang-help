@@ -281,7 +281,7 @@ class ProviderReviewTest extends TestCase
     {
         $expected = [
             'en' => ['approved' => 'Provider approved.', 'rejected' => 'Provider rejected.', 'suspended' => 'Provider suspended.'],
-            'ja' => ['approved' => 'Providerを承認しました。', 'rejected' => 'Providerを却下しました。', 'suspended' => 'Providerを停止しました。'],
+            'ja' => ['approved' => 'プロバイダーを承認しました。', 'rejected' => 'プロバイダーを却下しました。', 'suspended' => 'プロバイダーを停止しました。'],
             'vi' => ['approved' => 'Đã phê duyệt nhà cung cấp.', 'rejected' => 'Đã từ chối nhà cung cấp.', 'suspended' => 'Đã tạm ngưng nhà cung cấp.'],
         ];
 

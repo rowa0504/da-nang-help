@@ -60,7 +60,7 @@ class ProviderProfileTest extends TestCase
     {
         $expected = [
             'en' => 'Your provider profile has been submitted for review.',
-            'ja' => 'Providerプロフィールを審査のために送信しました。',
+            'ja' => 'プロバイダープロフィールを審査のために送信しました。',
             'vi' => 'Hồ sơ nhà cung cấp của bạn đã được gửi để xét duyệt.',
         ];
 

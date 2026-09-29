@@ -224,8 +224,10 @@ const ja: TranslationDictionary = {
     'provider.profile.avg_rating': '平均評価',
     'provider.profile.completed_jobs': '完了ジョブ数',
     'provider.profile.submit': '審査に提出する',
-    'provider.profile.approved_edit_notice': 'プロフィールを編集すると再審査になります。再承認されるまでFeedに表示されず新規Offerも受信できませんが、既存のJobは通常どおり継続できます。',
-    'provider.profile.approved_edit_confirm_body': '編集を送信すると再審査になり、承認されるまでFeed非表示・新規Offer受信不可になります。よろしいですか？',
+    'provider.profile.approved_edit_notice':
+        'プロフィールを編集すると再審査になります。再承認されるまで、新しい依頼の閲覧やオファーの送信はできません。すでに依頼者とのマッチングが成立している仕事は、そのまま継続できます。',
+    'provider.profile.approved_edit_confirm_body':
+        '保存するとプロフィールは再審査中になります。再承認されるまで、新しい依頼の閲覧やオファーの送信はできません。編集内容を送信しますか？',
     'provider.profile.inactive_retained_heading': '現在の登録（現在は新規受付を停止中）',
     'provider.profile.pending_review_badge': 'プロフィール再審査中',
 

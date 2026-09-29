@@ -223,9 +223,9 @@ const en = {
     'provider.profile.completed_jobs': 'Completed jobs',
     'provider.profile.submit': 'Submit for review',
     'provider.profile.approved_edit_notice':
-        "Editing your profile sends it back for review. Until it's approved again, you won't appear in the Feed or receive new offers — but your existing jobs continue as normal.",
+        'Editing your profile will send it back for review. Until it is approved again, you cannot view new requests or submit offers. Work that has already been matched with a customer can continue as usual.',
     'provider.profile.approved_edit_confirm_body':
-        "Are you sure? Your profile will go back to pending review, and you won't appear in the Feed or receive new offers until it's approved again.",
+        'Saving these changes will send your profile back for review. Until it is approved again, you cannot view new requests or submit offers. Do you want to continue?',
     'provider.profile.inactive_retained_heading': 'Currently registered (no longer accepting new applications)',
     'provider.profile.pending_review_badge': 'Profile under re-review',
 

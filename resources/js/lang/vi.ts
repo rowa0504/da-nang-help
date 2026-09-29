@@ -226,9 +226,9 @@ const vi: TranslationDictionary = {
     'provider.profile.completed_jobs': 'Công việc đã hoàn thành',
     'provider.profile.submit': 'Gửi để xét duyệt',
     'provider.profile.approved_edit_notice':
-        'Chỉnh sửa hồ sơ sẽ gửi lại để xét duyệt. Cho đến khi được phê duyệt lại, bạn sẽ không xuất hiện trên Feed hoặc nhận offer mới — nhưng các công việc hiện có vẫn tiếp tục bình thường.',
+        'Khi chỉnh sửa hồ sơ, hồ sơ của bạn sẽ được gửi lại để xét duyệt. Cho đến khi được phê duyệt lại, bạn không thể xem yêu cầu mới hoặc gửi đề nghị. Các công việc đã được kết nối với khách hàng vẫn có thể tiếp tục như bình thường.',
     'provider.profile.approved_edit_confirm_body':
-        'Bạn có chắc chắn không? Hồ sơ của bạn sẽ quay lại trạng thái chờ xét duyệt, và bạn sẽ không xuất hiện trên Feed hoặc nhận offer mới cho đến khi được phê duyệt lại.',
+        'Khi lưu các thay đổi này, hồ sơ của bạn sẽ được gửi lại để xét duyệt. Cho đến khi được phê duyệt lại, bạn không thể xem yêu cầu mới hoặc gửi đề nghị. Bạn có muốn tiếp tục không?',
     'provider.profile.inactive_retained_heading': 'Đang đăng ký hiện tại (không còn nhận đăng ký mới)',
     'provider.profile.pending_review_badge': 'Hồ sơ đang được xét duyệt lại',
 
