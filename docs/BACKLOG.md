@@ -143,6 +143,23 @@ Draft v0.4（[BLUEPRINT.md](BLUEPRINT.md)）で「MVP機能実装完了」と位
 - 関連FR/NFR: [20 未確定事項](BLUEPRINT.md#20-未確定事項確認したいこと)
 - 完了条件: メール以外の代替・補完通知チャネル（Zalo/SMS等）の必要性を検証し、必要であれば導入する
 
+### P1-6. 双方向レビュー（Provider→Customer）
+- 状態: 未着手
+- 優先度: P1
+- 関連FR/NFR: FR-40〜42、[16 データベース / ER設計案](BLUEPRINT.md#16-データベース--er設計案)「DB制約」の`reviews`行
+- 現行仕様: Customer→Providerの一方向のみ（`CreateReviewRequest`がCustomerロール限定、`reviews.job_id`にUNIQUE制約）
+- 完了条件: 以下すべてを満たす
+  - ProviderからCustomerへのレビュー投稿を可能にする
+  - `reviews`のUNIQUE制約を`job_id`単独から適切な複合制約（`job_id`+評価方向、または`job_id`+`rater_id`）へ変更する
+  - raterとrateeが、対象Jobの当事者（そのJobのCustomerまたはProvider本人）であることを検証する
+  - 自己レビュー（rater = ratee）を拒否する
+  - 同一方向（同じJob・同じraterからの2件目）の重複レビューを拒否する
+  - Customer→ProviderとProvider→Customerを、同一Jobに対して各1件ずつ許可する
+  - 双方向それぞれの平均評価の算出方法（Provider側の`avg_rating`と、新設するCustomer側の評価指標)と、その表示先画面を定義する
+  - マイグレーションのup/downをテストする（既存レビューを保持したまま、UNIQUE制約の変更のみで移行できること）
+  - 上記すべてを検証するFeatureテストを追加する
+- 備考: スキーマ変更（UNIQUE制約の変更）を伴うため、今回のMVP（v0.1.0）には含めない
+
 ---
 
 ## P2 — 将来拡張
