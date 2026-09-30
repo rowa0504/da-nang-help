@@ -3,13 +3,16 @@ import { router, usePage } from '@inertiajs/react';
 import { SharedProps, SupportedLocale } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 
-// Explicit, exhaustive correspondence table — deliberately not a cast of
-// the raw <select> value to SupportedLocale, so an unexpected option value
-// can never be smuggled through as a supported locale.
-const LOCALE_OPTIONS: { value: SupportedLocale; labelKey: 'language.en' | 'language.ja' | 'language.vi' }[] = [
-    { value: 'en', labelKey: 'language.en' },
-    { value: 'ja', labelKey: 'language.ja' },
-    { value: 'vi', labelKey: 'language.vi' },
+// Each option is always shown in its own language (never translated into
+// the current UI locale) so a reader can find their target language even
+// after accidentally switching to one they can't read. Deliberately not
+// sourced from the language.en/ja/vi dictionary keys — those remain in use
+// for the Request/Offer source_locale pickers, which *do* want the
+// current-UI-locale translation (see Show.tsx's SOURCE_LOCALE_OPTIONS).
+const LOCALE_OPTIONS: { value: SupportedLocale; label: string }[] = [
+    { value: 'en', label: '🇬🇧 English' },
+    { value: 'ja', label: '🇯🇵 日本語' },
+    { value: 'vi', label: '🇻🇳 Tiếng Việt' },
 ];
 
 function isSupportedLocale(value: string): value is SupportedLocale {
@@ -52,7 +55,7 @@ export function LocaleSwitcher() {
             >
                 {LOCALE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
-                        {t(option.labelKey)}
+                        {option.label}
                     </option>
                 ))}
             </select>
