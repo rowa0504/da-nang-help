@@ -132,6 +132,11 @@ export default function Show({ request, myOffer, canOffer, job, can_edit }: Prop
                     }
                     actions={<Badge variant={REQUEST_STATUS_VARIANTS[request.status]}>{t(REQUEST_STATUS_KEYS[request.status])}</Badge>}
                 />
+                {request.moderation_status === 'hidden' && (
+                    <div className="mt-3">
+                        <Alert variant="warning">{t('requests.show.hidden_notice')}</Alert>
+                    </div>
+                )}
                 <p className="mt-1 text-sm text-gray-600">
                     <strong className="font-medium text-gray-800">{t('common.urgency')}:</strong> {t(URGENCY_KEYS[request.urgency])}
                 </p>

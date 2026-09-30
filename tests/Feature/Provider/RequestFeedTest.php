@@ -37,6 +37,11 @@ class RequestFeedTest extends TestCase
         $this->actingAs($provider)->get('/provider/requests')->assertOk()->assertInertia(
             fn (Assert $page) => $page->where('requests.data.0.id', $serviceRequest->id)
                 ->where('requests.data.0.match_level', 'full')
+                // moderation_status is a Customer-owner-only field (see
+                // ServiceRequestResource) — a Provider must never receive it,
+                // even for a request that is (necessarily, to appear here at
+                // all) currently visible.
+                ->missing('requests.data.0.moderation_status')
         );
     }
 

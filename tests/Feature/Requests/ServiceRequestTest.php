@@ -285,6 +285,7 @@ class ServiceRequestTest extends TestCase
         $this->actingAs($provider)->get("/requests/{$serviceRequest->id}")->assertOk()->assertInertia(
             fn (Assert $page) => $page->missing('request.address_text')
                 ->missing('request.customer')
+                ->missing('request.moderation_status')
                 ->where('request.match_level', 'full')
         );
     }
@@ -371,6 +372,48 @@ class ServiceRequestTest extends TestCase
 
         $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertOk();
         $this->actingAs($admin)->get("/requests/{$serviceRequest->id}")->assertOk();
+    }
+
+    /**
+     * moderation_status is exposed to the owning Customer only — never to
+     * Admin (which already has its own dedicated Resource shape via
+     * Admin\ServiceRequestModerationController) and never to a Provider
+     * (see test_matching_approved_provider_can_view_but_not_see_private_fields
+     * below for the Provider-omission assertion).
+     */
+    public function test_owner_sees_moderation_status_reflecting_the_actual_value(): void
+    {
+        $customer = User::factory()->create();
+        $visibleRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        $hiddenRequest = ServiceRequest::factory()->forCustomer($customer)->hidden()->create();
+
+        $this->actingAs($customer)->get("/requests/{$visibleRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('request.moderation_status', 'visible')
+        );
+        $this->actingAs($customer)->get("/requests/{$hiddenRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('request.moderation_status', 'hidden')
+        );
+    }
+
+    public function test_hidden_request_still_shows_address_text_to_its_owner(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->hidden()->create();
+
+        $this->actingAs($customer)->get("/requests/{$serviceRequest->id}")->assertInertia(
+            fn (Assert $page) => $page->where('request.moderation_status', 'hidden')
+                ->has('request.address_text')
+        );
+    }
+
+    public function test_own_request_list_exposes_moderation_status_per_row(): void
+    {
+        $customer = User::factory()->create();
+        ServiceRequest::factory()->forCustomer($customer)->hidden()->create();
+
+        $this->actingAs($customer)->get('/requests')->assertInertia(
+            fn (Assert $page) => $page->where('requests.data.0.moderation_status', 'hidden')
+        );
     }
 
     public function test_owner_can_cancel_an_open_request(): void

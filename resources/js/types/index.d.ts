@@ -102,6 +102,11 @@ export interface ServiceRequestData {
     created_at: string;
     photos: ServiceRequestPhoto[];
     match_level?: MatchLevel;
+    // Present only when the viewer is the posting Customer (never Admin,
+    // never a Provider — see ServiceRequestResource). Lets the Customer's
+    // own request views explain why offers/edits have stopped, without
+    // claiming a specific reason.
+    moderation_status?: ServiceRequestModerationStatus;
     // Present only when the viewer is the posting Customer or an Admin —
     // the backend Resource decides this, the frontend just renders
     // whatever fields happen to be present (this is a display convenience,

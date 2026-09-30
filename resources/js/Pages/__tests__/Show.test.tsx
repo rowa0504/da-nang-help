@@ -85,6 +85,32 @@ describe('Requests/Show private info block', () => {
     });
 });
 
+describe('Requests/Show moderation notice', () => {
+    it('shows a warning notice when the request has been hidden by an admin', () => {
+        render(<Show request={baseRequest({ moderation_status: 'hidden' })} myOffer={null} canOffer={false} job={null}
+                can_edit={false} />);
+
+        expect(
+            screen.getByText(
+                'This request has been hidden following an administrator review. It is not shown in providers’ request feeds and cannot receive new offers.',
+            ),
+        ).toBeInTheDocument();
+    });
+
+    it('shows no notice when the request is visible', () => {
+        render(<Show request={baseRequest({ moderation_status: 'visible' })} myOffer={null} canOffer={false} job={null}
+                can_edit={false} />);
+
+        expect(screen.queryByText(/administrator review/)).not.toBeInTheDocument();
+    });
+
+    it('shows no notice when moderation_status is absent (e.g. a non-owner shape)', () => {
+        render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null} can_edit={false} />);
+
+        expect(screen.queryByText(/administrator review/)).not.toBeInTheDocument();
+    });
+});
+
 describe('Requests/Show edit link', () => {
     it('shows the edit link when can_edit is true', () => {
         render(<Show request={baseRequest()} myOffer={null} canOffer={false} job={null} can_edit={true} />);

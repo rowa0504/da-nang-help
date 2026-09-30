@@ -155,6 +155,7 @@ const ja: TranslationDictionary = {
     'requests.index.heading': '自分の依頼',
     'requests.index.empty': 'まだ依頼を投稿していません。',
     'requests.index.empty_description': 'エアコン修理や清掃など、ダナンでの困りごとを投稿してみましょう。',
+    'requests.index.hidden_badge': '非公開',
     'requests.create.title': '依頼を投稿',
     'requests.create.heading': '依頼を投稿',
     'requests.create.select_category': 'カテゴリを選択',
@@ -176,6 +177,7 @@ const ja: TranslationDictionary = {
     'requests.show.offer_language_label': 'メッセージの言語',
     'requests.show.confirm_withdraw': 'このオファーを取り下げますか？',
     'requests.show.edit': '依頼を編集',
+    'requests.show.hidden_notice': 'この依頼は管理者の確認により非公開になっています。プロバイダーの依頼フィードには表示されず、新しいオファーは受け取れません。',
 
     'requests.edit.title': '依頼を編集',
     'requests.edit.heading': '依頼を編集',

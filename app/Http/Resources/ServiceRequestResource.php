@@ -29,6 +29,13 @@ class ServiceRequestResource extends JsonResource
             && ($viewer->id === $this->customer_id
                 || $viewer->role === UserRole::Admin
                 || $viewer->id === $assignedProviderId);
+        // Deliberately narrower than $canSeePrivate (which also covers Admin
+        // and the assigned Provider): moderation_status is a Customer-facing
+        // "why can't I get offers anymore" explanation, not a general
+        // private-field grant. Admin already has its own dedicated Resource
+        // shape (see Admin\ServiceRequestModerationController), and a
+        // Provider must never learn a request was moderated at all.
+        $isOwner = $viewer !== null && $viewer->id === $this->customer_id;
         $viewerLocale = $viewer->locale ?? 'en';
         $matchLevel = $this->matchLevelFor($viewer, $request);
         // title/description share one translation row per locale, so the
@@ -65,6 +72,7 @@ class ServiceRequestResource extends JsonResource
                 'url' => Storage::disk(config('filesystems.default'))->temporaryUrl($photo->object_key, now()->addMinutes(15)),
             ]),
             ...$matchLevel !== null ? ['match_level' => $matchLevel->value] : [],
+            'moderation_status' => $this->when($isOwner, fn () => $this->moderation_status->value),
             ...$canSeePrivate ? [
                 'address_text' => $this->address_text,
                 'lat' => $this->lat !== null ? (float) $this->lat : null,

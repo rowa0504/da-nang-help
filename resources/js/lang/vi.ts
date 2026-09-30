@@ -156,6 +156,7 @@ const vi: TranslationDictionary = {
     'requests.index.heading': 'Yêu cầu của tôi',
     'requests.index.empty': 'Bạn chưa đăng yêu cầu nào.',
     'requests.index.empty_description': 'Hãy đăng một yêu cầu về sửa chữa, dọn dẹp hoặc bất cứ điều gì bạn cần giúp đỡ tại Đà Nẵng.',
+    'requests.index.hidden_badge': 'Đã ẩn',
     'requests.create.title': 'Đăng yêu cầu',
     'requests.create.heading': 'Đăng yêu cầu',
     'requests.create.select_category': 'Chọn danh mục',
@@ -177,6 +178,8 @@ const vi: TranslationDictionary = {
     'requests.show.offer_language_label': 'Ngôn ngữ của lời nhắn này',
     'requests.show.confirm_withdraw': 'Rút lại đề nghị này?',
     'requests.show.edit': 'Chỉnh sửa yêu cầu',
+    'requests.show.hidden_notice':
+        'Yêu cầu này đã bị ẩn sau khi quản trị viên xem xét. Yêu cầu sẽ không xuất hiện trong danh sách yêu cầu của nhà cung cấp và không thể nhận đề nghị mới.',
 
     'requests.edit.title': 'Chỉnh sửa yêu cầu',
     'requests.edit.heading': 'Chỉnh sửa yêu cầu',

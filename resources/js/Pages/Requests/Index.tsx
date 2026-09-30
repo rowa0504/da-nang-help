@@ -62,7 +62,10 @@ export default function Index({ requests }: Props) {
                                     <Link href={`/requests/${request.id}`} className="font-medium text-brand-600 underline hover:text-brand-700">
                                         {request.title}
                                     </Link>
-                                    <Badge variant={REQUEST_STATUS_VARIANTS[request.status]}>{t(REQUEST_STATUS_KEYS[request.status])}</Badge>
+                                    <span className="flex gap-2">
+                                        <Badge variant={REQUEST_STATUS_VARIANTS[request.status]}>{t(REQUEST_STATUS_KEYS[request.status])}</Badge>
+                                        {request.moderation_status === 'hidden' && <Badge variant="warning">{t('requests.index.hidden_badge')}</Badge>}
+                                    </span>
                                 </div>
                                 <p className="mt-1 text-sm text-gray-600">{formatDateTime(request.created_at)}</p>
                             </Card>

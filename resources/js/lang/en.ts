@@ -153,6 +153,7 @@ const en = {
     'requests.index.heading': 'My Requests',
     'requests.index.empty': "You haven't posted any requests yet.",
     'requests.index.empty_description': 'Post a request for repairs, cleaning, or anything else you need help with in Da Nang.',
+    'requests.index.hidden_badge': 'Hidden',
     'requests.create.title': 'Post a Request',
     'requests.create.heading': 'Post a Request',
     'requests.create.select_category': 'Select a category',
@@ -174,6 +175,8 @@ const en = {
     'requests.show.offer_language_label': 'Language of this message',
     'requests.show.confirm_withdraw': 'Withdraw this offer?',
     'requests.show.edit': 'Edit request',
+    'requests.show.hidden_notice':
+        'This request has been hidden following an administrator review. It is not shown in providers’ request feeds and cannot receive new offers.',
 
     'requests.edit.title': 'Edit Request',
     'requests.edit.heading': 'Edit Request',
