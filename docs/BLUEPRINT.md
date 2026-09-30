@@ -1,11 +1,24 @@
 # Da Nang Help — 要件定義・技術設計ドラフト
 
-**Draft v0.3.1 — Implementation Ready — 2026-08-30**（Draft v0.3: 2026-08-30 からの改訂）
+**Draft v0.4 — MVP機能実装完了 — 2026-09-30**（Draft v0.3.1: 2026-08-30 からの改訂）
 ダナン在住外国人と現地ローカルサービス提供者をつなぐマッチングプラットフォーム — 要件定義・技術設計ドラフト
 
-> 非公開ドキュメント / アプリケーションコード・Laravel/React/Docker等のセットアップは本ドラフトの時点では未着手。Draft v0.3.1では、Phase 1〜Phase 5相当（開発環境構築〜オファー機能）の実装に着手できるレベルまで要件・データベース・API設計の整合性を取り、基本設計を一旦freezeします。ただしJobキャンセルの詳細条件など一部の論点は[20 未確定事項](#20-未確定事項確認したいこと)としてPhase 6着手前に確定する前提です。
+> 非公開ドキュメント / Draft v0.4時点で、MVP機能（[07 MVP機能](#07-mvp機能)・FR-01〜FR-50）はローカル開発環境（Docker Compose）上で実装・自動テスト・手動E2Eによる検証を完了しています。ただし本番用機械翻訳サービス（Amazon Translate）・CI/CD・AWS本番環境（[18 AWS構成案](#18-aws構成案)）は未実装であり、本番公開の準備自体はまだ完了していません（残作業は`docs/BACKLOG.md`・[19 開発ロードマップ](#19-開発ロードマップ)のPhase 10残作業を参照）。
 
 ## 変更履歴
+
+### Draft v0.4 変更履歴（MVP機能実装完了）
+
+Phase 1〜Phase 10A-2相当の実装が完了した時点で、ドラフトを実装の実態に合わせて更新しました。機能のスコープ自体は拡張していません（既存FR-01〜46は変更せず維持し、実装済みの拡張機能にはFR-47〜50を新設）。
+
+1. FR-47〜FR-50を新設し、実装済みの拡張機能（Providerプロフィール編集・再審査、Customer依頼編集、「その他」カテゴリ、国際電話番号検証）を反映 → [09 機能要件](#09-機能要件)
+2. 依頼フィード・依頼詳細の閲覧条件（FR-11・FR-15、[17 API設計案](#17-api設計案)の認可設計）を、実装の実態（`verification_status = approved`かつ`open`/`visible`であれば表示し、対応カテゴリ・対応エリアとの一致度はフィードの並び順・絞り込みの表示上の指標であり閲覧可否の条件ではない）に合わせて修正
+3. 依頼の位置情報入力（FR-09、ER図）を、Customerによる緯度・経度の直接入力を廃止した実装（`address_text`のみ必須、`lat`/`lng`はnullableで将来のGoogle Maps連携用に保持）に合わせて修正
+4. 非機能要件「セキュリティ」行を、ログイン試行のレート制限（実装済み、FR-01関連）と、依頼投稿・Offer送信等の書き込み系エンドポイントのレート制限（未実装、`docs/BACKLOG.md` P0）を区別する表現に修正
+5. Job自動確定日数（FR-38）・Jobキャンセルの条件（FR-14）・キャンセル後のService Request再オープンの要否を実装済みの内容で確定し、[20 未確定事項](#20-未確定事項確認したいこと)から該当項目を除去
+6. キュー用テーブルとドメインのJobテーブルの命名を、実装の実態（キューはLaravel既定の`jobs`のまま、ドメイン側を`service_jobs`に改名）に合わせて修正 → [18 AWS構成案](#18-aws構成案)
+7. [19 開発ロードマップ](#19-開発ロードマップ)にPhase 10A／10A-2／10A追加改善の実績と、Phase 10の残作業（レート制限拡張・Amazon Translate・AWSインフラ・CI/CD・README・本番設定と監視）を反映
+8. 未対応・未着手項目は本ドラフトから`docs/BACKLOG.md`へ分離して一覧化（本ドラフト自体は「何を実装したか」の記録に専念する）
 
 ### Draft v0.3.1 追加改訂（AWSコストレビュー、バージョン番号は維持）
 
@@ -203,7 +216,7 @@ flowchart TD
 
 Offer acceptのタイミングでService Requestは`assigned`となり、以降の作業進捗（対応開始・完了報告・完了確認・完了）はService Requestではなく**Jobのstatus**のみで管理されます（詳細は[16 データベース / ER設計案](#16-データベース--er設計案)の「ステータス遷移」参照）。また、acceptされたOfferの価格はその時点でJobの`agreed_price`/`currency`としてスナップショットコピーされ、以降Offer側の情報が変わってもJobの合意内容は変わりません。
 
-アサイン確定のタイミングで初めて正確な住所・座標と連絡先が選ばれたProviderにのみ開示されるため、それまでにProviderへ渡る情報はエリア・カテゴリ・写真・説明・緊急度に限定されます（詳細は[10 非機能要件](#10-非機能要件)）。Job完了は「Providerの完了報告」と「Customerの完了確認（または一定期間経過後の自動確定）」の2段階を経て確定し、その後のレビューが次の依頼者の判断材料として蓄積されます（詳細は[09 機能要件](#09-機能要件)）。
+アサイン確定のタイミングで初めて正確な住所と連絡先が選ばれたProviderにのみ開示されるため、それまでにProviderへ渡る情報はエリア・カテゴリ・写真・説明・緊急度に限定されます（詳細は[10 非機能要件](#10-非機能要件)）。Job完了は「Providerの完了報告」と「Customerの完了確認（または一定期間経過後の自動確定）」の2段階を経て確定し、その後のレビューが次の依頼者の判断材料として蓄積されます（詳細は[09 機能要件](#09-機能要件)）。
 
 ---
 
@@ -252,8 +265,8 @@ Offer acceptのタイミングでService Requestは`assigned`となり、以降�
 | カテゴリ | 多言語カテゴリ管理 | `categories` + `category_translations` によるカテゴリ名の日本語・英語・ベトナム語登録 | MUST |
 | エリア | エリアマスタ管理 | Adminによるエリア（area）の追加・編集・非表示 | MUST |
 | エリア | Provider対応エリア（複数） | Providerが対応カテゴリ・対応エリアを複数選択して登録 | MUST |
-| 困りごと投稿 | 依頼作成 | カテゴリ・エリア選択・詳細・写真（複数枚、EXIF削除・再エンコード済み）・正確な位置情報（非公開項目として保存）・緊急度・入力言語（source_locale）の選択 | MUST |
-| 困りごと投稿 | 依頼フィード（Provider向け） | 承認済みかつカテゴリ×エリアが合致するProviderにのみ表示。翻訳済み／原文切替可のタイトル・説明。正確な住所・座標・Customer連絡先は非表示 | MUST |
+| 困りごと投稿 | 依頼作成 | カテゴリ・エリア選択・詳細・写真（複数枚、EXIF削除・再エンコード済み）・正確な住所（非公開項目として保存）・緊急度・入力言語（source_locale）の選択 | MUST |
+| 困りごと投稿 | 依頼フィード（Provider向け） | 承認済みProviderに対し`open`/`visible`な依頼を原則すべて表示し、対応カテゴリ・対応エリアとの一致度で並び替え・絞り込みが可能（FR-11）。翻訳済み／原文切替可のタイトル・説明。正確な住所・Customer連絡先は非表示 | MUST |
 | 困りごと投稿 | 依頼詳細の認可 | 投稿者・Admin・条件を満たす承認済みProviderのみ閲覧可。正確な住所・連絡先はアサイン後、選ばれたProviderにのみ開示 | MUST |
 | 困りごと投稿 | 依頼キャンセル | Offerをacceptするまでの間、Customerが依頼を取り下げ可能（未確定Offerは無効化） | SHOULD |
 | 機械翻訳 | 依頼の自動翻訳 | Service Requestのtitle/descriptionをen/ja/viへ非同期機械翻訳。原文を保持し、未完了・失敗時は原文にフォールバック | MUST |
@@ -320,14 +333,14 @@ FR番号はDraft v0.3.1で再度振り直しています。
 
 ### 困りごと（Service Request）管理
 
-- **FR-09** Customerはカテゴリ・タイトル・詳細説明・写真（最大5枚程度）・エリア・詳細位置情報（住所／座標）・緊急度を入力して依頼を作成できる。`source_locale`は投稿時点のUI表示言語を初期値とし、Customerは投稿前に`en`/`ja`/`vi`の範囲で変更できる（自動言語判定サービスは使用しない）。Service Request作成後はMVPでは本文編集機能を持たないため`source_locale`も変更不可
-- **FR-10** open状態の依頼フィードでは、Providerに対しエリア・カテゴリ・タイトル（翻訳済み／原文切替可）・説明（翻訳済み／原文切替可）・写真・緊急度・投稿日時のみを表示し、正確な住所・座標・Customerの連絡先は表示しない
-- **FR-11** 依頼フィードは、`verification_status = approved` かつ対応カテゴリ・対応エリアの両方がRequestと合致するProviderにのみ表示する
+- **FR-09** Customerはカテゴリ・タイトル・詳細説明・写真（最大5枚程度）・エリア・住所（`address_text`）・緊急度を入力して依頼を作成できる。緯度・経度（`lat`/`lng`）はCustomerが直接入力する項目ではなく、将来のGoogle Maps連携によるバックフィルのためnullable列として保持する。`source_locale`は投稿時点のUI表示言語を初期値とし、Customerは投稿前に`en`/`ja`/`vi`の範囲で変更できる（自動言語判定サービスは使用しない）。作成後の依頼編集はFR-48で定める条件下でのみ可能であり、編集時も`source_locale`は変更できない
+- **FR-10** open状態の依頼フィードでは、Providerに対しエリア・カテゴリ・タイトル（翻訳済み／原文切替可）・説明（翻訳済み／原文切替可）・写真・緊急度・投稿日時のみを表示し、正確な住所・Customerの連絡先は表示しない
+- **FR-11** 依頼フィードは、`verification_status = approved` なProviderに対し、`open`かつ`moderation_status = visible`な依頼を原則すべて表示する。各依頼はProvider自身の対応カテゴリ・対応エリアとの一致度（両方合致=full、いずれか一方のみ合致=partial、いずれも合致しない=none）に応じて上位から並び替えて表示し、Providerは「おすすめのみ（partial以上）」表示への切り替えや、カテゴリ・エリアそれぞれでの個別絞り込みができる。一致度は表示上の並び順・絞り込みの指標であり、閲覧可否やOffer送信可否の条件にはしない
 - **FR-12** Customerは、Offerをacceptするまで（`service_request.status = open`）の間、依頼をキャンセルできる。キャンセル時、紐づく未確定のOfferは無効化（`status: cancelled`）される
 - **FR-13** Service Requestのステータスは `open` / `assigned` / `cancelled` の3値のみとする。`open`はOfferを募集中の状態、`assigned`はOfferがacceptされJobが生成された状態、`cancelled`はOffer accept前にCustomerが依頼を取り下げた状態を表す。「Offerが届いているか」は `offers` テーブルの存在で判定し、`service_requests` 側に重複したステータスは持たせない。**Job生成後の作業進捗（対応開始・完了報告・完了確認・完了）はService Request側では管理せず、`jobs.status` をSingle Source of Truthとする**（Service Requestは`assigned`のまま変化しない）
-- **FR-14** OfferをacceptしてJobが生成された後の依頼取り消しは、Service Requestのキャンセルではなく、Jobのキャンセル（`jobs.status = cancelled`）として扱う。Jobキャンセルの具体的な条件・ペナルティルールは本ドラフトでは確定せず、Phase 6実装前に別途決定する（[20 未確定事項](#20-未確定事項確認したいこと)）
-- **FR-15** `GET /requests/{id}`（依頼詳細）を閲覧できるのは、投稿したCustomer本人、Admin、および `verification_status = approved` かつ対応カテゴリ・対応エリアがRequestと合致するProviderに限る。正確な住所・座標・Customerの連絡先は、投稿者・Admin・Jobにアサインされたそのプロバイダーにのみ返却する（詳細は[17 API設計案](#17-api設計案)の認可設計）
-- **FR-16** Requestが`assigned`になった後、選ばれなかった他のProviderは当該Requestの正確な住所・座標・Customer連絡先を新たに取得できない
+- **FR-14** OfferをacceptしてJobが生成された後の依頼取り消しは、Service Requestのキャンセルではなく、Jobのキャンセル（`jobs.status = cancelled`）として扱う。Jobが`assigned`または`in_progress`の間、当該Jobの当事者であるCustomerまたはProvider本人がJobをキャンセルできる。ペナルティルール（レビューへの反映等）は実装しない。キャンセル後もService Requestは`assigned`のまま維持し、再オープン（再度`open`へ戻して募集し直す）は行わない
+- **FR-15** `GET /requests/{id}`（依頼詳細）を閲覧できるのは、投稿したCustomer本人、Admin、`verification_status = approved`でRequestが`open`かつ`moderation_status = visible`なProvider、および当該Requestへ既にOfferを送信済みのProvider（Requestが`assigned`/`cancelled`になった後も、自身のOffer状態確認のため閲覧を継続できる）に限る。対応カテゴリ・対応エリアとの一致度は閲覧可否の条件ではなく、フィード内の並び順・絞り込みにのみ用いる（FR-11）。正確な住所・Customerの連絡先は、投稿者・Admin・Jobにアサインされたそのプロバイダーにのみ返却する（詳細は[17 API設計案](#17-api設計案)の認可設計）
+- **FR-16** Requestが`assigned`になった後、選ばれなかった他のProviderは当該Requestの正確な住所・Customer連絡先を新たに取得できない
 - **FR-17** アップロードされた写真はEXIFメタデータ（GPS情報を含む）を削除し、サーバー側で再エンコードした上で保存する。投稿画面には、写真に住所・顔・部屋番号・車両ナンバー等が写り込まないよう注意喚起を表示する
 
 ### 依頼・Offer内容の機械翻訳
@@ -337,7 +350,7 @@ FR番号はDraft v0.3.1で再度振り直しています。
 - **FR-20** 閲覧者の表示言語に対応する翻訳が存在する場合はその翻訳文を表示し、「自動翻訳」であることを明示する。原文と翻訳文は切り替えて確認できる。閲覧言語が`source_locale`と一致する場合は原文をそのまま表示し、翻訳行は作成しない
 - **FR-21** 翻訳が未完了（`pending`）または失敗（`failed`）の場合は原文へフォールバックして表示し、Service Requestの投稿・Offerの送信自体を失敗させない
 - **FR-22** 正確な住所・電話番号・価格・通貨・日時などの構造化データは翻訳対象にしない
-- **FR-23** 原文（`title`/`description`/`message`）が編集された場合、既存の翻訳は無効化（再度`pending`化）され、再翻訳される。ただし`accepted`/`rejected`/`withdrawn`/`cancelled`となったOfferの原文・翻訳文は変更しない。Service Requestの`title`/`description`はMVPでは編集機能を持たないため、本ルールは現時点では主にOfferの編集（FR-28）に適用される
+- **FR-23** 原文（`title`/`description`/`message`）が編集された場合、既存の翻訳は無効化（再度`pending`化）され、再翻訳される。ただし`accepted`/`rejected`/`withdrawn`/`cancelled`となったOfferの原文・翻訳文は変更しない。Service Requestの`title`/`description`の編集はFR-48で定める条件下でのみ可能であり、変更した場合のみ本ルールが適用される（Offerの編集はFR-28）
 - **FR-23a**（v0.3.1コストレビューで追加）翻訳ジョブは、対象ID・翻訳先locale・登録時点の原文から算出した`source_hash`を保持する。翻訳結果の保存直前に対象の現在の原文から`source_hash`を再計算し、ジョブが保持するhashと一致する場合のみ保存する。一致しない場合は古いジョブによる結果と判断し、保存せず終了する（短時間の複数回編集や翻訳APIのリトライで、新しい翻訳結果を古いジョブが上書きすることを防ぐ）。同一原文・同一localeに対する翻訳ジョブの重複登録は避ける
 
 ### オファー管理
@@ -359,7 +372,7 @@ FR番号はDraft v0.3.1で再度振り直しています。
 - **FR-35** ProviderはJobステータスを `assigned` → `in_progress` に更新できる（対応開始の報告）
 - **FR-36** Providerは作業完了時に完了報告を行う（`provider_completed_at` を記録、ステータスは `awaiting_confirmation` へ）
 - **FR-37** CustomerはProviderの完了報告を確認し、確定操作を行う（`customer_confirmed_at` を記録し、Jobは `completed` へ遷移）
-- **FR-38** Customerが一定期間反応しない場合、`auto_confirm_at` 到達後にJobは自動的に `completed` へ遷移する（自動確定までの具体的な日数は未確定、[20 未確定事項](#20-未確定事項確認したいこと)参照）
+- **FR-38** Customerが一定期間反応しない場合、`auto_confirm_at` 到達後にJobは自動的に `completed` へ遷移する。自動確定までの期間は`AUTO_CONFIRM_DAYS`環境変数で管理し、既定値は3日とする
 - **FR-39** Jobはステータス（`assigned` / `in_progress` / `awaiting_confirmation` / `completed` / `cancelled`）を持つ。Job生成以降の進行状況はこの`jobs.status`のみを正とし、`service_requests.status`と二重管理しない（FR-13参照）
 
 ### レビュー管理
@@ -378,6 +391,15 @@ FR番号はDraft v0.3.1で再度振り直しています。
 - **FR-45** Adminが行えるのは、閲覧・非表示化・無効化・Providerの承認/却下/停止・内部メモの記録・カテゴリ/エリアマスタの編集などのモデレーション操作に限る
 - **FR-46** Adminは、Offer価格・Jobの合意価格・CustomerまたはProviderが投稿した本文（依頼内容・Offerメッセージ）・Reviewの評価値やコメント本文を直接書き換えることはできない。モデレーションは本文の改ざんではなく、非表示化・無効化・アカウント停止・内部記録によって行う
 
+### 実装済み拡張機能（Draft v0.4で追加、FR-01〜46のスコープは変更しない）
+
+Phase 10A-2までの実装の中で、既存FR-01〜46を変更せずに追加された機能です。番号は既存FRへの割り込みを避けるため末尾から付与しています。
+
+- **FR-47** Providerは`pending`・`rejected`・`approved`のいずれの状態にあるプロフィールも編集できる。`suspended`状態のプロフィールは編集できない。編集を保存すると`verification_status`は`pending`へ遷移し、`approved_at`・`rejected_at`・`suspended_at`・`verification_note`はすべてnullへ戻る。再承認されるまで、新規の依頼閲覧・Offer送信はできないが、すでに成立している既存のJobは継続して対応できる。編集時点で紐づいている非activeなカテゴリ・エリアは維持または解除できるが、非activeな項目を新たに選択することはできない
+- **FR-48** Customerは、自身が投稿した依頼が`open`かつ`moderation_status = visible`であり、かつOfferが1件も存在しない場合にのみ、当該依頼を編集できる。編集対象はタイトル・説明・カテゴリ・エリア・住所（`address_text`）・緊急度・写真であり、写真は既存写真の削除と新規追加を組み合わせて合計5枚以内で編集できる（写真の保存・削除処理の具体的な実行順序は[15 技術アーキテクチャ案](#15-技術アーキテクチャ案)を参照）。`source_locale`（原文言語）は編集によって変更しない。タイトルまたは説明を変更した場合のみ、既存の翻訳を無効化し再翻訳する（FR-23）。編集時点で選択中の非activeなカテゴリ・エリアは維持できるが、別の非active項目へ変更することはできない
+- **FR-49** Customerはカテゴリの一つとして「その他」を選択して依頼を投稿できる。「その他」選択時は、依頼内容を具体的に入力するよう画面上で案内を表示する。Providerが対応カテゴリとして「その他」を選択する場合、対応可能なサービスの詳細（500文字以内）の入力を必須とする。この対応内容は、Customerが「その他」カテゴリの依頼に届いたOfferを確認する画面でのみ表示し、それ以外のカテゴリの依頼では返却・表示しない
+- **FR-50** 電話番号の入力は任意とする。入力された場合は、ASCII数字を7〜15桁含み、使用できる記号は半角スペース・`-`・`(`・`)`に限り、`+`は先頭に1つだけ使用できる。入力全体の長さは30文字以内とする。入力値は現時点では正規化せず、そのまま保存する
+
 ---
 
 ## 10 非機能要件
@@ -387,11 +409,11 @@ FR番号はDraft v0.3.1で再度振り直しています。
 | 多言語対応 | UI文言・カテゴリ名・通知メールは日本語/英語/ベトナム語を初期対応、追加言語を後から拡張できる構造にする（カテゴリはtranslation table方式） | 言語の壁の解消がプロダクトの中核価値であり、Vietnameseは主にProvider UIの利用性確保のためにも必要 |
 | モバイル最適化 | Customer・Provider双方の主要導線をモバイルファーストで設計する | ローカルProviderも外国人Customerも移動中のスマホ利用が中心 |
 | パフォーマンス | 画像は圧縮・リサイズしてから保存し、CDN経由で配信する | ベトナム国内・海外双方からのアクセスで表示速度を担保するため |
-| セキュリティ | 認証・認可・レート制限・アップロードファイルの拡張子/サイズ検証を実装する | 個人情報（写真・位置情報・連絡先）を扱うため最低限のガードは必須 |
-| **プライバシー（位置情報・連絡先の最小開示）** | open状態の依頼フィードでは正確な住所・座標・電話番号をProviderに公開せず、エリア・カテゴリ・説明・写真・緊急度のみを表示する。正確な住所・座標・連絡先は、Offerがacceptされ Job が生成された後、選ばれたProviderと依頼したCustomerの間でのみ相互開示する。プライバシーポリシーは多言語で提示する | 外国人ユーザーは個人情報保護への感度が高く、マッチング前の正確な位置情報公開はストーカー・空き巣リスク等の観点でも避けるべきため |
+| セキュリティ | 認証・認可・アップロードファイルの拡張子/サイズ検証を実装する。ログイン試行はレート制限する（実装済み：email+IPキーで5回/60秒）。依頼投稿・Offer送信・登録・写真アップロード等の書き込み系エンドポイントへの包括的なレート制限は、対象・単位・上限値を別途決定した上で本番公開前に実装する（`docs/BACKLOG.md` P0） | 個人情報（写真・位置情報・連絡先）を扱うため最低限のガードは必須。総当たり攻撃はログイン以外の書き込みエンドポイントからも起こり得るため、対象を限定せず整理する |
+| **プライバシー（位置情報・連絡先の最小開示）** | open状態の依頼フィードでは正確な住所・電話番号をProviderに公開せず、エリア・カテゴリ・説明・写真・緊急度のみを表示する。正確な住所・連絡先は、Offerがacceptされ Job が生成された後、選ばれたProviderと依頼したCustomerの間でのみ相互開示する。プライバシーポリシーは多言語で提示する | 外国人ユーザーは個人情報保護への感度が高く、マッチング前の正確な位置情報公開はストーカー・空き巣リスク等の観点でも避けるべきため |
 | **データ整合性・同時実行制御** | Offer承諾やJob生成など複数テーブルにまたがる更新はDBトランザクションと行ロックで整合性を担保し、Service Requestあたり通算最大1件のJobであることをアプリケーション制約とDB制約（unique制約）の両方で保証する | 同時アクセスによる二重Job生成やデータ不整合を防ぐため（詳細は[15 技術アーキテクチャ案](#15-技術アーキテクチャ案)） |
 | **機械翻訳** | 依頼（title/description）とOffer（message）は閲覧者の表示言語に応じて機械翻訳される。原文は必ず保持し、翻訳が未完了・失敗の場合は原文にフォールバックして投稿・送信自体は失敗させない。翻訳結果はDBへ保存し再利用する。翻訳は「自動翻訳」であることを明示し、完全な正確性を保証しない旨をUIに表示する | 言語の壁の解消というコア価値を、多言語UIだけでなくユーザー生成コンテンツにも及ぼすため（詳細は[15 技術アーキテクチャ案](#15-技術アーキテクチャ案)） |
-| **画像プライバシー** | アップロード写真はEXIFメタデータ（GPS情報含む）を削除しサーバー側で再エンコードする。拡張子だけでなく実際のMIME typeを検証し、ファイルサイズ・画像サイズ・枚数を制限する。S3バケットはprivateとし、DBには公開URLではなくobject keyを保存し、表示時には期限付きURLを発行する | 正確な住所・座標を非公開にしても、写真のEXIFからGPS情報が漏洩し得るため（詳細は[15 技術アーキテクチャ案](#15-技術アーキテクチャ案)） |
+| **画像プライバシー** | アップロード写真はEXIFメタデータ（GPS情報含む）を削除しサーバー側で再エンコードする。拡張子だけでなく実際のMIME typeを検証し、ファイルサイズ・画像サイズ・枚数を制限する。S3バケットはprivateとし、DBには公開URLではなくobject keyを保存し、表示時には期限付きURLを発行する | 正確な住所を非公開にしても、写真のEXIFからGPS情報が漏洩し得るため（詳細は[15 技術アーキテクチャ案](#15-技術アーキテクチャ案)） |
 | **コスト管理（Stage 1）** | MVPは利用者・収益がまだ存在しない実験段階であるため、Stage 1ではMulti-AZ・Auto Scaling・Redis／ElastiCache・SQS・CloudFront・WAF・NAT Gatewayを導入せず、常時稼働リソースを最小化する。一方、認証・認可、個人情報のサーバー側フィールド制御、private S3、EXIF削除・画像検証、DBトランザクション・行ロック、UNIQUE・CHECK・外部キー制約、秘密情報の安全な管理、RDSバックアップ、最低限のCloudWatchログ、IAM Task Roleによる最小権限アクセスは費用削減を理由に省略しない | 将来拡張性より月額固定費の最小化を優先しつつ、個人情報保護とデータ整合性は妥協しないため（詳細は[18 AWS構成案](#18-aws構成案)） |
 | 可用性 | MVPはシングルAZ運用を許容しつつ、定期バックアップを必須とする | 初期の投資対効果を優先しつつデータ消失リスクは排除する |
 | 拡張性 | コンテナ化・ステートレスなアプリケーション設計とし、将来のオートスケールに耐える構成にする。エリアはMany-to-Manyとし、将来の他都市展開時に構造を作り替えずに済むようにする | 需要拡大時にECS/Fargateへの移行、および他都市展開を前提としているため |
@@ -535,7 +557,7 @@ Offer accept（[FR-27](#09-機能要件)）はCustomer・Provider双方に影響
 `GET /requests/{id}`をはじめ、個人情報・位置情報を含むレスポンスは以下の方針で実装します（閲覧権限の詳細は[17 API設計案](#17-api設計案)）。
 
 - Request自体の閲覧可否はLaravelの**Policy**（例: `ServiceRequestPolicy`）で判定する
-- 返却フィールドは**API Resource／Dataクラス**などを用いて権限別に制御し、非公開フィールド（正確な住所・座標・Customer連絡先等）は権限がない場合はレスポンスそのものに含めない。取得後にReact側だけで非表示にする実装は行わない
+- 返却フィールドは**API Resource／Dataクラス**などを用いて権限別に制御し、非公開フィールド（正確な住所・Customer連絡先等）は権限がない場合はレスポンスそのものに含めない。取得後にReact側だけで非表示にする実装は行わない
 - Inertiaの共有Propsにも、権限のない個人情報を含めない
 - Job成立前（`open`時点の一般Provider）と成立後（アサインされたProvider）の双方について、フィールドが正しく出し分けられることを検証する認可テストを作成する
 
@@ -665,8 +687,8 @@ erDiagram
     text description
     string source_locale "en / ja / vi"
     string address_text "Job成立前は非公開"
-    decimal lat "Job成立前は非公開"
-    decimal lng "Job成立前は非公開"
+    decimal lat "nullable。Customerによる直接入力は廃止し、将来のGoogle Maps連携用に保持"
+    decimal lng "nullable。Customerによる直接入力は廃止し、将来のGoogle Maps連携用に保持"
     enum urgency "normal / urgent"
     enum status "open / assigned / cancelled"
     enum moderation_status "visible / hidden"
@@ -772,6 +794,8 @@ erDiagram
 > `service_request_translations` / `offer_translations` は、原文と同じ`locale`の翻訳行を作成しません。閲覧言語が`source_locale`と一致する場合は、翻訳テーブルを参照せず原文（`service_requests.title`/`description`、`offers.message`）をそのまま表示します（重複ストレージを避けるための一貫方針、FR-20）。
 >
 > `source_hash`は、短時間の複数回編集や翻訳APIのリトライによって、古い翻訳ジョブの結果が新しい原文の翻訳を上書きしてしまうrace conditionを防ぐためのカラムです。翻訳結果の保存直前に現在の原文からhashを再計算し、ジョブが保持するhashと一致する場合のみ保存します（FR-23a、[15 技術アーキテクチャ案](#15-技術アーキテクチャ案)）。
+>
+> `JOBS`エンティティの物理テーブル名は`service_jobs`です。Laravel標準のキューテーブル名`jobs`との名称衝突を避けるため、キューテーブルの方はLaravelの既定名`jobs`のまま残し、ドメイン側のテーブルを改名しています（[18 AWS構成案](#18-aws構成案)「Scheduler／Queueの実行方式」参照）。本文中の"Job"という概念名・モデル名はそのまま使用します。
 
 ### ステータス遷移
 
@@ -790,7 +814,7 @@ erDiagram
 | `provider_categories` | Providerと対応カテゴリの中間テーブル（Many-to-Many） |
 | `areas` | サービス対応エリアのマスタ |
 | `provider_areas` | Providerと対応エリアの中間テーブル（Many-to-Many） |
-| `service_requests` | Customerが投稿する困りごと本体。statusは`open`/`assigned`/`cancelled`のみ（Job生成後の進行は`jobs`が正）。`moderation_status`でAdminモデレーションを、`status`とは別に管理する。正確な住所・座標はJob成立前は非公開 |
+| `service_requests` | Customerが投稿する困りごと本体。statusは`open`/`assigned`/`cancelled`のみ（Job生成後の進行は`jobs`が正）。`moderation_status`でAdminモデレーションを、`status`とは別に管理する。正確な住所はJob成立前は非公開（`lat`/`lng`はnullableで現状Customer入力は行わない） |
 | `service_request_translations` | Service Requestの`title`/`description`の多言語訳（en/ja/vi、`service_request_id+locale`でunique）。`source_hash`で古い翻訳ジョブによる上書きを防止 |
 | `offers` | Providerが依頼に対して提示する見積もり（`price`/`currency`/`message`/`available_at`） |
 | `offer_translations` | Offerの`message`の多言語訳（en/ja/vi、`offer_id+locale`でunique）。`source_hash`で古い翻訳ジョブによる上書きを防止 |
@@ -847,9 +871,10 @@ Inertia構成のため、これらは厳密なJSON APIというよりLaravelの�
 | GET | `/categories` | カテゴリ一覧取得（現在の表示言語に翻訳した`name`を含む） | 全ユーザー |
 | GET | `/areas` | エリア一覧取得 | 全ユーザー |
 | POST | `/requests` | 困りごとの新規投稿（カテゴリ・エリア・詳細位置情報・source_localeを含む） | Customer |
-| GET | `/requests/{id}` | 依頼詳細の取得。投稿者、Admin、およびカテゴリ・エリア条件を満たす承認済みProviderが閲覧可能。正確な住所・座標・Customer連絡先は、投稿者・Admin・JobにアサインされたProviderにのみ返却する。Provider向けレスポンスでは権限に応じて非公開フィールドを除外し、フロントエンドで隠すだけの実装にはしない（詳細は下記「認可設計」） | Customer, Provider, Admin |
+| GET | `/requests/{id}` | 依頼詳細の取得。投稿者、Admin、`open`かつ`visible`な依頼を閲覧できる承認済みProvider、および既にOfferを送信済みのProviderが閲覧可能（対応カテゴリ・対応エリアとの一致度は並び順・絞り込みの表示上の指標であり、閲覧可否の条件ではない）。正確な住所・Customer連絡先は、投稿者・Admin・JobにアサインされたProviderにのみ返却する。Provider向けレスポンスでは権限に応じて非公開フィールドを除外し、フロントエンドで隠すだけの実装にはしない（詳細は下記「認可設計」） | Customer, Provider, Admin |
+| PATCH | `/requests/{id}` | 依頼の編集（`open`かつ`visible`でOfferが0件の場合のみ、FR-48） | Customer |
 | PATCH | `/requests/{id}/cancel` | 依頼の取り下げ（Offer accept前のみ実行可。紐づく未確定Offerを無効化） | Customer |
-| GET | `/provider/requests` | 承認済みかつカテゴリ×エリアが合致するProvider向けの依頼フィード（翻訳済み／原文切替可のタイトル・説明を含み、正確な住所・Customer連絡先は含まない） | Provider |
+| GET | `/provider/requests` | 承認済みProvider向けの依頼フィード。`open`かつ`visible`な依頼を対応カテゴリ・対応エリアとの一致度（full/partial/none）で並び替えて表示し、「おすすめのみ」表示への切り替えやカテゴリ・エリアでの個別絞り込みも可能（翻訳済み／原文切替可のタイトル・説明を含み、正確な住所・Customer連絡先は含まない） | Provider |
 | POST | `/requests/{id}/offers` | オファーの送信（`price`・`currency`・`message`・`available_at`・`source_locale`） | Provider |
 | GET | `/requests/{id}/offers` | 依頼に届いたオファー一覧の取得（`message`は翻訳済み／原文切替可） | Customer |
 | PATCH | `/offers/{id}` | `pending`のOfferの編集（`price`・`currency`・`message`・`available_at`・`source_locale`）。`message`/`source_locale`変更時は既存翻訳を無効化し`source_hash`を再計算した上で翻訳を再生成 | Provider |
@@ -874,10 +899,11 @@ Inertia構成のため、これらは厳密なJSON APIというよりLaravelの�
 
 | 閲覧者 | 条件 | 閲覧可能項目 | 閲覧不可の項目 |
 |---|---|---|---|
-| 投稿したCustomer | 本人 | 全項目（正確な住所・座標、届いたOffer一覧、自身の登録情報を含む） | — |
-| 承認済みProvider | `verification_status = approved` かつ対応カテゴリ・対応エリアが合致し、Requestが`open` | エリア・カテゴリ・タイトル（翻訳／原文）・説明（翻訳／原文）・写真・緊急度・投稿日時 | 正確な住所・緯度経度、Customerの電話番号、その他非公開個人情報 |
-| アサインされたProvider | Offerがacceptされ、当該RequestのJobの`provider_id`が自分自身 | 上記に加え、正確な住所・緯度経度、Customerの電話番号、Job遂行に必要な連絡先情報 | — |
-| その他のProvider | 上記条件を満たさない、またはRequestが`assigned`になった後の非選定Provider | — | 全項目（一覧・詳細ともに非表示） |
+| 投稿したCustomer | 本人 | 全項目（正確な住所、届いたOffer一覧、自身の登録情報を含む） | — |
+| 承認済みProvider | `verification_status = approved`、Requestが`open`かつ`visible`（対応カテゴリ・対応エリアとの一致度はフィード内の並び順・絞り込みにのみ影響し、閲覧可否の条件ではない） | エリア・カテゴリ・タイトル（翻訳／原文）・説明（翻訳／原文）・写真・緊急度・投稿日時 | 正確な住所、Customerの電話番号、その他非公開個人情報 |
+| アサインされたProvider | Offerがacceptされ、当該RequestのJobの`provider_id`が自分自身 | 上記に加え、正確な住所、Customerの電話番号、Job遂行に必要な連絡先情報 | — |
+| 既存Offerを持つProvider（未選定） | Requestが`assigned`/`cancelled`になった後も、自分が送信済みのOfferが存在する | 公開項目（エリア・カテゴリ・タイトル・説明・写真・緊急度・投稿日時）と自分のOfferの状態 | 正確な住所、Customerの電話番号 |
+| その他のProvider | `verification_status = approved`でない、Requestが`hidden`、またはRequestが`open`以外でOfferも持たない | — | 全項目（一覧・詳細ともに非表示） |
 | Admin | 常時 | 運用・審査・トラブル対応に必要な範囲で全項目。個人情報へのアクセスは認可対象とし、将来的に監査ログを追加可能な設計とする | — |
 | その他のユーザー | — | — | 全項目（原則閲覧不可） |
 
@@ -915,7 +941,7 @@ flowchart LR
     WORKER["Workerコンテナ<br/>php artisan queue:work"]
     SCHED["Schedulerコンテナ<br/>php artisan schedule:work"]
   end
-  PHPFPM --> DBQ["Database Queue<br/>(queue_jobsテーブル)"]
+  PHPFPM --> DBQ["Database Queue<br/>(jobsテーブル、Laravel既定)"]
   WORKER --> DBQ
   SCHED -.->|auto_confirm等の定期バッチ| DBQ
   WORKER -->|Public IP経由・NAT不要| TRANSLATE["Amazon Translate"]
@@ -944,9 +970,9 @@ flowchart LR
 - Stage 1はECS Taskが1つのため、Schedulerも原則1インスタンスで動作し、EventBridge Schedulerから定期的にECS Taskを起動するような構成は採用しない（短時間Taskの繰り返し起動はMVPの低トラフィックに対して過剰な複雑性になるため）
 - 将来Schedulerが複数起動する構成へ移行する場合は、Laravelの`withoutOverlapping`／`onOneServer`を使用する。Stage 1ではRedisを導入しないため、`onOneServer`のロックにはLaravelのdatabase cache／database lockを利用する（Laravelのdatabase cacheドライバはアトミックロックをサポートする）
 - 自動確定処理（`auto_confirm_at`到達判定）は、`status = awaiting_confirmation` かつ `auto_confirm_at <= now()` のJobを一定件数ずつ取得して処理する。更新は`WHERE id = ? AND status = 'awaiting_confirmation'`のような条件付き更新とし、同じJobが複数回処理されても不整合が起きない冪等な処理とする
-- Laravel標準のキューテーブル名`jobs`はドメインの`jobs`（Job）テーブルと衝突するため、キュー用テーブル名は`queue_jobs`のように変更する
+- Laravelの標準キューテーブル名`jobs`とドメインのJobテーブルの名称衝突を避けるため、キューテーブルはLaravelの既定名`jobs`のまま残し、ドメイン側のテーブルを`service_jobs`という物理テーブル名にする（アプリケーションコード上のモデル名・概念名としては引き続き"Job"/"Jobs"と呼ぶ）
 - キュージョブにはretry回数とtimeoutを設定し（例: 通知系ジョブは3回・30秒、翻訳ジョブは3回・60秒程度を初期値とし、実測に応じて調整する）、`failed_jobs`テーブルへ失敗ジョブを記録する
-- Laravelのdatabase queueは成功したジョブを自動的に削除するため`queue_jobs`自体は肥大化しにくいが、`failed_jobs`はSchedulerコンテナから定期的に古いレコードを削除する（保持期間は運用しながら調整して構わない）
+- Laravelのdatabase queueは成功したジョブを自動的に削除するため`jobs`（キュー）テーブル自体は肥大化しにくいが、`failed_jobs`はSchedulerコンテナから定期的に古いレコードを削除する（保持期間は運用しながら調整して構わない）
 - 各キュージョブ（通知作成、翻訳等）は、同じジョブが複数回実行されても副作用が重複しないよう冪等に実装する
 
 ### ネットワーク設計: NAT Gatewayを使用しない
@@ -1035,11 +1061,16 @@ Stage 2への移行を検討するトリガー例（具体的な数値閾値は�
 | Phase 7 | レビュー機能 | 評価投稿、Providerプロフィールへの反映（非表示レビューの平均評価除外） |
 | Phase 8 | 通知・多言語化 | メール通知、日本語/英語/ベトナム語UI、言語切替UI、翻訳表示UX（原文/翻訳切替・自動翻訳の明示）の仕上げ |
 | Phase 9 | Admin機能の拡充 | モデレーション、カテゴリ・エリア管理、簡易ダッシュボード |
-| Phase 10 | UI/UX・QA・ソフトローンチ準備 | デザインシステム、モバイル最適化、アクセシビリティ、結合テスト、Stage 1 AWSインフラ、CI/CD |
+| Phase 10A | 共通UIデザインシステム・レスポンシブ対応 | 共通UIコンポーネント、モバイル最適化、レイアウトの統一 |
+| Phase 10A-2 | ブランド・Home・カテゴリ体験の仕上げ | Home画面・ブランディングの調整、「その他」カテゴリの追加（FR-49） |
+| Phase 10A追加改善 | 実装中に判明した仕様修正・機能拡張 | 住所UXの簡素化（Customerによる緯度経度入力の廃止）、依頼フィードの一致条件緩和（FR-11）、翻訳の原文/訳文切替表示、国際電話番号検証（FR-50）、Providerプロフィール編集・再審査（FR-47）、Customer依頼編集（FR-48）、多言語表現の自然化 |
+| Phase 10（残作業） | 本番公開準備 | 書き込み系エンドポイントのレート制限、Amazon Translate実装、Stage 1 AWSインフラ、CI/CD、README・運用ドキュメント、本番設定・監視体制（詳細は`docs/BACKLOG.md`） |
 | Phase 11 | ダナンでのソフトローンチ | **限定エリア・限定カテゴリ**からの初期ユーザー獲得（[12 戦略的考察](#12-戦略的考察)のGo-to-market戦略に基づく。マーケティング施策自体は別途検討） |
 | Phase 12+ | フィードバックに基づく拡張 | チャット・決済・認証バッジ等（[14 将来的な拡張機能](#14-将来的な拡張機能)参照） |
 
 Phase 4・5では翻訳のバックエンド基盤（キュージョブ・保存・原文フォールバック）と最低限の表示を実装し、Phase 8で言語切替UIや翻訳表示UX（自動翻訳の明示、原文/翻訳の切替UI）を完成させる、という依存関係を前提とします。
+
+Phase 10A／10A-2／10A追加改善は、実際のコミット単位の実績を反映した区分です。Phase 10自体の完了条件（本番公開準備の完了）は、上記「Phase 10（残作業）」に整理した項目がすべて完了することであり、これらは`docs/BACKLOG.md`のP0として一覧管理します。
 
 ---
 
@@ -1058,21 +1089,28 @@ Draft v0.1で挙げた以下の論点は、v0.2ではMVPの暫定方針として
 7. **Admin** — MVP初期は開発者自身がAdmin業務を兼務する前提とする。
 8. **初期Customerターゲット** — 日本人および英語話者を初期Customer獲得の中心とする。ただしプロダクト自体は特定国籍限定にはしない。
 
+### v0.4で決定した事項
+
+Phase 6実装にあたり、以下3点はDraft v0.3.1時点では未確定でしたが、実装済みの内容で確定しています（対応するFRを更新済み）。
+
+1. **Job自動確定（`auto_confirm_at`）までの日数** — `AUTO_CONFIRM_DAYS`環境変数で管理し、既定値は3日とする（FR-38）。
+2. **Jobキャンセルの条件・ペナルティルール** — `assigned`または`in_progress`の間、当該Jobの当事者（Customer本人またはProvider本人）がキャンセルできる。ペナルティルール（レビューへの反映等）は実装しない（FR-14）。
+3. **Jobキャンセル後のService Request再オープンの要否** — 再オープンしない。キャンセル後もService Requestは`assigned`のまま維持する（FR-14）。
+
 ### 引き続き残っている未確定事項
 
-以下はDraft v0.3.1でも意図的に確定させていません。現行のER設計（`jobs.status`に`cancelled`が既に含まれる、`auto_confirm_at`カラムが既に存在する等）は、これらを後から確定してもテーブル構造の大きな変更を必要としない形になっていることを確認済みです。特に2〜4はJobライフサイクル実装（Phase 6）着手前に確定が必要です。
+以下はDraft v0.4でも意図的に確定させていません。
 
-1. **初期ローンチの具体的な対象エリア・カテゴリ** — 「限定されたエリア・カテゴリから開始する」方針は確定したが、具体的なエリア名・カテゴリの組み合わせは本ドラフトでは意図的に未確定としている。
-2. **Job自動確定（`auto_confirm_at`）までの具体的な日数** — 何日間Customerの反応が無ければ自動確定とするか。
-3. **Jobキャンセルの条件・ペナルティルール** — どの状態（assigned / in_progress等）から、CustomerとProviderのどちらがキャンセルできるか、キャンセル時のペナルティ（レビューへの反映等）をどうするか。
-4. **Jobキャンセル後のService Request再オープンの要否** — キャンセルされたJobに紐づいていた依頼を再度Provider募集可能な状態（open）へ戻す機能を持たせるか、持たせないか。
-5. **Provider向け通知チャネル** — MVPはメール通知を前提としているが、ローカルProviderの実際の主要連絡手段（Zalo/SMS等）とのギャップにより通知が届きにくいリスクがあり、代替・補完チャネルの検討が必要か。
-6. **他都市展開時のarea/city構造** — `areas`テーブルへ都市（city）概念を追加するタイミングと具体的な設計（[14 将来的な拡張機能](#14-将来的な拡張機能)）。
-7. **リード課金導入の具体的なトリガー条件** — 取引量・期間などどの閾値を超えたら導入するか。
+1. **初期ローンチの具体的な対象エリア・カテゴリ** — 「限定されたエリア・カテゴリから開始する」方針は確定したが、具体的なエリア名・カテゴリの組み合わせは本ドラフトでは意図的に未確定としている。現在は6エリア・8カテゴリ（[07 MVP機能](#07-mvp機能)・FR-49）すべてが有効な状態であり、初期ローンチ向けの絞り込みはまだ行っていない。
+2. **Provider向け通知チャネル** — MVPはメール通知を前提としているが、ローカルProviderの実際の主要連絡手段（Zalo/SMS等）とのギャップにより通知が届きにくいリスクがあり、代替・補完チャネルの検討が必要か。
+3. **他都市展開時のarea/city構造** — `areas`テーブルへ都市（city）概念を追加するタイミングと具体的な設計（[14 将来的な拡張機能](#14-将来的な拡張機能)）。
+4. **リード課金導入の具体的なトリガー条件** — 取引量・期間などどの閾値を超えたら導入するか。
 
 ---
 
-## セルフレビュー（Draft v0.3.1）
+## Draft v0.3.1時点の設計レビュー（履歴）
+
+> **このセクション（本節末尾までの3つの見出しすべて）はDraft v0.3.1時点の設計判断を記録した履歴であり、現在の実装状況を示すものではありません。** 現行仕様はDraft v0.4の本文・[変更履歴](#変更履歴)を参照してください。特に本節中の「未確定事項」という記述は、[20 未確定事項・確認したいこと](#20-未確定事項確認したいこと)の「v0.4で決定した事項」で更新される前の、当時時点のものです。
 
 - **機械翻訳の対象・原文保持・失敗時フォールバック**: Service Requestの`title`/`description`とOfferの`message`が翻訳対象であり、正確な住所・電話番号・価格・通貨・日時等の構造化データは対象外であることを、FR-18〜23・NFR（機械翻訳）・技術アーキテクチャ（機械翻訳の節）・ER図（`service_request_translations`/`offer_translations`）・User Journey・User Storiesの6箇所で一貫させた。原文保持と翻訳未完了/失敗時のフォールバックはFR-21・アーキテクチャの両方に明記し、投稿・Offer送信自体を失敗させない方針で統一している。既存の「リアルタイムチャット＋自動翻訳」は[08 スコープ外機能](#08-スコープ外機能mvp対象外)・[14 将来的な拡張機能](#14-将来的な拡張機能)で引き続きMVP対象外と明記し、今回追加した構造化テキスト項目への機械翻訳と明確に区別した。
 - **Request詳細APIの認可とフィールド制御**: `GET /requests/{id}`の閲覧権限をFR-15・FR-16・[17 API設計案](#17-api設計案)の認可設計テーブル・[15 技術アーキテクチャ案](#15-技術アーキテクチャ案)の「認可とレスポンス制御」の3箇所で一貫させた。Policy／Resource・Dataクラスによるサーバー側でのフィールド制御を明記し、フロントエンドで隠すだけの実装を明示的に禁止。Job成立前後の認可テスト作成もアーキテクチャ節に明記した。
