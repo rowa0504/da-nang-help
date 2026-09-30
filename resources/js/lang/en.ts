@@ -170,6 +170,7 @@ const en = {
     'requests.show.confirm_cancel': 'Cancel this request? This cannot be undone.',
     'requests.show.your_offer': 'Your offer',
     'requests.show.send_offer_heading': 'Send an offer',
+    'requests.show.price_vnd_label': 'Price (VND)',
     'requests.show.edit_offer_heading': 'Edit your offer',
     'requests.show.available_from_optional': 'Available from (optional)',
     'requests.show.offer_language_label': 'Language of this message',
@@ -195,7 +196,7 @@ const en = {
     'offers.index.empty_description': 'Offers from local providers will show up here once they respond.',
     'offers.index.available_from': 'Available from: {date}',
     'offers.index.provider_summary': '{business_name} · rating {rating} · {count} completed jobs',
-    'offers.index.confirm_accept': 'Accept this offer for {currency} {price}? This cannot be undone.',
+    'offers.index.confirm_accept': 'Accept this offer for {amount}? This cannot be undone.',
     'offers.index.confirm_reject': 'Reject this offer?',
 
     'provider.requests.index.title': 'Request Feed',

@@ -85,6 +85,56 @@ describe('Requests/Show private info block', () => {
     });
 });
 
+describe('Requests/Show offer price field (VND-only)', () => {
+    it('renders no currency field at all, and a text/numeric MoneyInput for price', () => {
+        asProviderViewer();
+        render(<Show request={baseRequest()} myOffer={null} canOffer={true} job={null} can_edit={false} />);
+
+        expect(screen.queryByLabelText(/currency/i)).not.toBeInTheDocument();
+        const priceField = screen.getByLabelText('Price (VND)');
+        expect(priceField).toHaveAttribute('type', 'text');
+        expect(priceField).toHaveAttribute('inputMode', 'numeric');
+    });
+
+    it('pre-fills the price field with the integer part only when editing an existing pending offer (no decimal point)', () => {
+        asProviderViewer();
+        const pendingOffer = {
+            id: 5,
+            price: '450000.00',
+            currency: 'VND',
+            message: 'x',
+            message_translation: { status: null, source_locale: 'en', original: 'x' },
+            available_at: null,
+            status: 'pending' as const,
+            created_at: '2026-01-01T00:00:00Z',
+            provider: { id: 1, business_name: 'Fixit Co.', avg_rating: '0.00', completed_jobs_count: 0, verification_status: 'approved' as const, other_service_details: null },
+            original_message: 'x',
+            source_locale: 'en' as const,
+        };
+        render(<Show request={baseRequest()} myOffer={pendingOffer} canOffer={false} job={null} can_edit={false} />);
+
+        expect(screen.getByLabelText('Price (VND)')).toHaveValue('450,000');
+    });
+
+    it('displays a confirmed/accepted offer\'s amount through formatCurrency (grouped, with VND suffix), not a raw concatenation', () => {
+        asProviderViewer();
+        const acceptedOffer = {
+            id: 6,
+            price: '450000.00',
+            currency: 'VND',
+            message: 'x',
+            message_translation: { status: null, source_locale: 'en', original: 'x' },
+            available_at: null,
+            status: 'accepted' as const,
+            created_at: '2026-01-01T00:00:00Z',
+            provider: { id: 1, business_name: 'Fixit Co.', avg_rating: '0.00', completed_jobs_count: 0, verification_status: 'approved' as const, other_service_details: null },
+        };
+        render(<Show request={baseRequest()} myOffer={acceptedOffer} canOffer={false} job={null} can_edit={false} />);
+
+        expect(screen.getByText(/450,000 VND/)).toBeInTheDocument();
+    });
+});
+
 describe('Requests/Show moderation notice', () => {
     it('shows a warning notice when the request has been hidden by an admin', () => {
         render(<Show request={baseRequest({ moderation_status: 'hidden' })} myOffer={null} canOffer={false} job={null}

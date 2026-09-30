@@ -3,6 +3,7 @@
 namespace Tests\Feature\Offers;
 
 use App\Actions\Offer\AcceptOfferAction;
+use App\Actions\Offer\CreateOfferAction;
 use App\Actions\Offer\RejectOfferAction;
 use App\Actions\Offer\UpdateOfferAction;
 use App\Actions\Offer\WithdrawOfferAction;
@@ -25,6 +26,7 @@ use App\Policies\OfferPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class OfferTest extends TestCase
@@ -41,11 +43,14 @@ class OfferTest extends TestCase
         return $provider;
     }
 
+    // MVP is VND-only: no 'currency' key here at all (CreateOfferRequest/
+    // UpdateOfferRequest reject it outright via `prohibited`, see the
+    // dedicated VND-only test group below), and 'price' is a bare integer
+    // string — VND has no fractional unit.
     private function offerPayload(array $overrides = []): array
     {
         return array_merge([
-            'price' => '150.00',
-            'currency' => 'USD',
+            'price' => '150000',
             'message' => 'I can help with this.',
             'available_at' => null,
             'source_locale' => 'en',
@@ -186,23 +191,29 @@ class OfferTest extends TestCase
     {
         $category = Category::factory()->create();
         $area = Area::factory()->create();
-        $provider = $this->approvedProviderFor($category, $area);
 
+        $provider0 = $this->approvedProviderFor($category, $area);
+        $zeroBoundary = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $this->actingAs($provider0)
+            ->post("/requests/{$zeroBoundary->id}/offers", $this->offerPayload(['price' => '0']))
+            ->assertRedirect();
+
+        $provider1 = $this->approvedProviderFor($category, $area);
         $atBoundary = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
-        $this->actingAs($provider)
-            ->post("/requests/{$atBoundary->id}/offers", $this->offerPayload(['price' => '9999999999.99']))
+        $this->actingAs($provider1)
+            ->post("/requests/{$atBoundary->id}/offers", $this->offerPayload(['price' => '9999999999']))
             ->assertRedirect();
 
         $provider2 = $this->approvedProviderFor($category, $area);
         $overBoundary = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
         $this->actingAs($provider2)
-            ->post("/requests/{$overBoundary->id}/offers", $this->offerPayload(['price' => '10000000000.00']))
+            ->post("/requests/{$overBoundary->id}/offers", $this->offerPayload(['price' => '10000000000']))
             ->assertInvalid(['price']);
 
         $provider3 = $this->approvedProviderFor($category, $area);
-        $threeDecimals = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $decimalRejected = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
         $this->actingAs($provider3)
-            ->post("/requests/{$threeDecimals->id}/offers", $this->offerPayload(['price' => '10.123']))
+            ->post("/requests/{$decimalRejected->id}/offers", $this->offerPayload(['price' => '100.00']))
             ->assertInvalid(['price']);
     }
 
@@ -213,10 +224,13 @@ class OfferTest extends TestCase
         $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
         $provider = $this->approvedProviderFor($category, $area);
 
-        $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload(['price' => '99.90']));
+        $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload(['price' => '150000']));
 
+        // The decimal(12,2) DB column is intentionally unchanged (kept for
+        // future flexibility), so the cast still returns a fixed-2-decimal
+        // string even though only whole VND is ever accepted as input now.
         $this->actingAs($serviceRequest->customer)->get("/requests/{$serviceRequest->id}/offers")->assertInertia(
-            fn (Assert $page) => $page->where('offers.data.0.price', fn ($price) => is_string($price) && $price === '99.90')
+            fn (Assert $page) => $page->where('offers.data.0.price', fn ($price) => is_string($price) && $price === '150000.00')
         );
     }
 
@@ -828,5 +842,125 @@ class OfferTest extends TestCase
         $serviceRequest->save();
 
         $this->actingAs($provider)->get("/requests/{$serviceRequest->id}")->assertForbidden();
+    }
+
+    // -----------------------------------------------------------------
+    // VND-only pricing (MVP currency policy)
+    // -----------------------------------------------------------------
+
+    public function test_currency_sent_by_the_client_is_rejected_with_422(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+
+        $this->actingAs($provider)
+            ->post("/requests/{$serviceRequest->id}/offers", $this->offerPayload(['currency' => 'USD']))
+            ->assertInvalid(['currency']);
+
+        $this->assertSame(0, Offer::where('service_request_id', $serviceRequest->id)->count());
+    }
+
+    public function test_currency_sent_on_update_is_also_rejected_with_422(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $offer = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create();
+
+        $this->actingAs($provider)
+            ->patch("/offers/{$offer->id}", $this->offerPayload(['currency' => 'VND']))
+            ->assertInvalid(['currency']);
+    }
+
+    public function test_create_offer_action_direct_call_always_forces_vnd_even_if_currency_is_smuggled_into_data(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+
+        $data = $this->offerPayload();
+        $data['currency'] = 'USD'; // a caller bypassing Form Request validation entirely
+        $offer = app(CreateOfferAction::class)->handle($provider, $serviceRequest, $data);
+
+        $this->assertSame('VND', $offer->fresh()->currency);
+    }
+
+    public function test_policy_rejects_editing_an_existing_non_vnd_offer(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $legacyUsdOffer = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create(['currency' => 'USD']);
+
+        $this->assertFalse((new OfferPolicy())->update($provider, $legacyUsdOffer));
+        $this->actingAs($provider)->patch("/offers/{$legacyUsdOffer->id}", $this->offerPayload())->assertForbidden();
+    }
+
+    public function test_update_offer_action_direct_call_rejects_an_existing_non_vnd_offer_after_the_lock(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $legacyUsdOffer = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create(['currency' => 'USD']);
+
+        $this->expectException(InvalidOfferTransitionException::class);
+        app(UpdateOfferAction::class)->handle($provider, $legacyUsdOffer, $this->offerPayload());
+    }
+
+    public function test_job_created_from_a_new_offer_snapshots_vnd(): void
+    {
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $offer = Offer::factory()->forServiceRequest($serviceRequest)->forProvider($provider)->create(['price' => '450000']);
+
+        $this->actingAs($serviceRequest->customer)->patch("/offers/{$offer->id}/accept");
+
+        $job = ServiceJob::where('service_request_id', $serviceRequest->id)->firstOrFail();
+        $this->assertSame('VND', $job->currency);
+        $this->assertSame('450000.00', $job->agreed_price);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function priceValidationLocaleProvider(): array
+    {
+        return [
+            'en' => ['en'],
+            'ja' => ['ja'],
+            'vi' => ['vi'],
+        ];
+    }
+
+    #[DataProvider('priceValidationLocaleProvider')]
+    public function test_missing_price_error_message_resolves_the_attribute_name_per_locale(string $locale): void
+    {
+        $expected = [
+            'en' => 'The price field is required.',
+            'ja' => '価格 は必須項目です。',
+            'vi' => 'Trường giá là bắt buộc.',
+        ][$locale];
+
+        $category = Category::factory()->create();
+        $area = Area::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->create(['category_id' => $category->id, 'area_id' => $area->id]);
+        $provider = $this->approvedProviderFor($category, $area);
+        $provider->locale = $locale;
+        $provider->save();
+
+        $data = $this->offerPayload();
+        unset($data['price']);
+        $response = $this->actingAs($provider)->post("/requests/{$serviceRequest->id}/offers", $data);
+
+        $response->assertInvalid(['price']);
+        $this->assertSame($expected, session('errors')->first('price'));
     }
 }

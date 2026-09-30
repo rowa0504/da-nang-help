@@ -47,7 +47,7 @@ export default function Index({ serviceRequest, offers }: Props) {
     async function accept(offer: OfferData) {
         const ok = await confirm({
             title: t('common.confirm'),
-            body: t('offers.index.confirm_accept', { currency: offer.currency, price: offer.price }),
+            body: t('offers.index.confirm_accept', { amount: formatCurrency(offer.price, offer.currency) }),
         });
         if (!ok) {
             return;

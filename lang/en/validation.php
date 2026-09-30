@@ -29,6 +29,7 @@ return [
     'file' => 'The :attribute field must be a file.',
     'phone_number' => 'The :attribute field must be a valid phone number (digits, spaces, -, (), and an optional leading + only).',
     'photo_limit_exceeded' => 'A service request may have at most :max photos.',
+    'prohibited' => 'The :attribute field is prohibited.',
 
     'between' => [
         'numeric' => 'The :attribute field must be between :min and :max.',
@@ -52,5 +53,9 @@ return [
     'attributes' => [
         'other_service_details' => 'other service details',
         'phone' => 'phone number',
+        'price' => 'price',
+        'currency' => 'currency',
+        'message' => 'message',
+        'available_at' => 'available date and time',
     ],
 ];

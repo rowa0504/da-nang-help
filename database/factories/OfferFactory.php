@@ -18,8 +18,11 @@ class OfferFactory extends Factory
         return [
             'service_request_id' => ServiceRequest::factory(),
             'provider_id' => User::factory()->provider(),
-            'price' => fake()->randomFloat(2, 10, 500),
-            'currency' => 'USD',
+            // MVP is VND-only for every new Offer (CreateOfferAction forces
+            // this); an integer amount with no fractional unit, matching
+            // the app-wide invariant this factory should reflect by default.
+            'price' => fake()->numberBetween(10_000, 5_000_000),
+            'currency' => 'VND',
             'message' => fake()->paragraph(),
             'source_locale' => 'en',
             'available_at' => null,

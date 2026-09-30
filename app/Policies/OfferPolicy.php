@@ -60,7 +60,10 @@ class OfferPolicy
 
     public function update(User $user, Offer $offer): bool
     {
-        return $user->id === $offer->provider_id && $offer->status === OfferStatus::Pending;
+        // MVP is VND-only: a legacy non-VND Offer can never be edited (see
+        // UpdateOfferAction, which re-verifies this after the row lock as
+        // the authoritative check).
+        return $user->id === $offer->provider_id && $offer->status === OfferStatus::Pending && $offer->currency === 'VND';
     }
 
     public function withdraw(User $user, Offer $offer): bool

@@ -16,8 +16,12 @@ class UpdateOfferRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'price' => ['required', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'currency' => ['required', 'regex:/^[A-Z]{3}$/'],
+            // MVP is VND-only (integer, no decimals): see UpdateOfferAction,
+            // which re-verifies the existing Offer is already VND (editing a
+            // legacy non-VND Offer is rejected) and forces currency to
+            // 'VND' regardless of what's sent here.
+            'price' => ['required', 'integer', 'min:0', 'max:9999999999'],
+            'currency' => ['prohibited'],
             'message' => ['required', 'string', 'max:2000'],
             'available_at' => ['nullable', 'date'],
             'source_locale' => ['required', Rule::in(['en', 'ja', 'vi'])],

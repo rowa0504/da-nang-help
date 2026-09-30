@@ -33,6 +33,35 @@ function paginated(items: OfferData[]): PaginatedData<OfferData> {
     };
 }
 
+describe('Requests/Offers/Index accept confirmation amount', () => {
+    it('shows the formatCurrency-formatted amount in the confirm dialog body, not a raw currency/price concatenation', () => {
+        render(
+            <Index
+                serviceRequest={{ id: 1, title: 'Need help', category_slug: 'cleaning' }}
+                offers={paginated([offer({ id: 9, price: '450000.00', currency: 'VND', status: 'pending' })])}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+
+        expect(screen.getByText('Accept this offer for 450,000 VND? This cannot be undone.')).toBeInTheDocument();
+    });
+
+    it('formats a legacy non-VND offer amount the same way it always has (backward compatibility)', () => {
+        render(
+            <Index
+                serviceRequest={{ id: 1, title: 'Need help', category_slug: 'cleaning' }}
+                offers={paginated([offer({ id: 9, price: '120.00', currency: 'USD', status: 'pending' })])}
+            />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Accept' }));
+
+        const expectedAmount = new Intl.NumberFormat('en', { style: 'currency', currency: 'USD' }).format(120);
+        expect(screen.getByText(`Accept this offer for ${expectedAmount}? This cannot be undone.`)).toBeInTheDocument();
+    });
+});
+
 describe('Requests/Offers/Index other_service_details display', () => {
     it('shows the provider\'s other service details when the request category is "other" and a value is present', () => {
         render(

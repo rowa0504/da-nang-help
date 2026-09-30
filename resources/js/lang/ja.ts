@@ -172,6 +172,7 @@ const ja: TranslationDictionary = {
     'requests.show.confirm_cancel': 'この依頼をキャンセルしますか？この操作は取り消せません。',
     'requests.show.your_offer': 'あなたのオファー',
     'requests.show.send_offer_heading': 'オファーを送る',
+    'requests.show.price_vnd_label': '価格（VND）',
     'requests.show.edit_offer_heading': 'オファーを編集',
     'requests.show.available_from_optional': '対応可能日時（任意）',
     'requests.show.offer_language_label': 'メッセージの言語',
@@ -196,7 +197,7 @@ const ja: TranslationDictionary = {
     'offers.index.empty_description': 'Providerからの提案が届くとここに表示されます。',
     'offers.index.available_from': '対応可能日時: {date}',
     'offers.index.provider_summary': '{business_name} · 評価 {rating} · 完了した作業 {count} 件',
-    'offers.index.confirm_accept': '{currency} {price} のこのオファーを承諾しますか？この操作は取り消せません。',
+    'offers.index.confirm_accept': '{amount} のこのオファーを承諾しますか？この操作は取り消せません。',
     'offers.index.confirm_reject': 'このオファーを拒否しますか？',
 
     'provider.requests.index.title': '依頼フィード',

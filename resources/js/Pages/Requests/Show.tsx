@@ -8,12 +8,14 @@ import { Badge, BadgeVariant } from '@/Components/Badge';
 import { Alert } from '@/Components/Alert';
 import { FormField } from '@/Components/FormField';
 import { Input } from '@/Components/Input';
+import { MoneyInput } from '@/Components/MoneyInput';
 import { Textarea } from '@/Components/Textarea';
 import { Select } from '@/Components/Select';
 import { Button } from '@/Components/Button';
 import { TranslatedText } from '@/Components/TranslatedText';
 import { TranslationNotice } from '@/Components/TranslationNotice';
 import { useTranslation } from '@/hooks/useTranslation';
+import { useLocaleFormat } from '@/hooks/useLocaleFormat';
 import { useConfirm } from '@/hooks/useConfirm';
 import { TranslationKey } from '@/lang/en';
 
@@ -224,8 +226,11 @@ export default function Show({ request, myOffer, canOffer, job, can_edit }: Prop
 }
 
 type OfferForm = {
+    // Always a bare ASCII-digit string (e.g. "450000"), never grouped and
+    // never carrying a decimal point — see MoneyInput. MVP is VND-only, so
+    // there is no client-side currency field at all (CreateOfferAction /
+    // UpdateOfferAction force it server-side).
     price: string;
-    currency: string;
     message: string;
     available_at: string;
     source_locale: SupportedLocale;
@@ -243,6 +248,7 @@ function OfferSection({
     matchLevel: ServiceRequestData['match_level'] | null;
 }) {
     const { t } = useTranslation();
+    const { formatCurrency } = useLocaleFormat();
 
     if (myOffer && myOffer.status !== 'pending') {
         return (
@@ -250,7 +256,7 @@ function OfferSection({
                 <h2 className="text-lg font-semibold text-gray-900">{t('requests.show.your_offer')}</h2>
                 <Badge variant={OFFER_STATUS_VARIANTS[myOffer.status]}>{t(OFFER_STATUS_KEYS[myOffer.status])}</Badge>
                 <p className="mt-2 text-gray-800">
-                    {myOffer.currency} {myOffer.price} —{' '}
+                    {formatCurrency(myOffer.price, myOffer.currency)} —{' '}
                     <TranslatedText id={myOffer.id} translation={myOffer.message_translation} translated={myOffer.message} />
                 </p>
             </Card>
@@ -278,14 +284,18 @@ function OfferForm({
     matchLevel: ServiceRequestData['match_level'] | null;
 }) {
     const { auth } = usePage<SharedProps>().props;
-    const { t } = useTranslation();
+    const { t, locale } = useTranslation();
     const { confirm, confirmDialog } = useConfirm();
     const rawLocale = auth.user?.locale;
     const defaultLocale: SupportedLocale = rawLocale !== undefined && isSupportedLocale(rawLocale) ? rawLocale : 'en';
 
     const { data, setData, post, patch, transform, processing, errors } = useForm<OfferForm>({
-        price: existingOffer?.price ?? '',
-        currency: existingOffer?.currency ?? 'USD',
+        // existingOffer.price is a decimal-cast string from the server
+        // (e.g. "450000.00" — the DB column stays decimal(12,2) even though
+        // only whole VND is accepted now); take just the integer part, not
+        // normalizeDigits(), since that "." is a decimal point here, not a
+        // thousands separator to strip.
+        price: existingOffer ? existingOffer.price.split('.')[0] : '',
         message: existingOffer?.original_message ?? '',
         available_at: toDatetimeLocalValue(existingOffer?.available_at),
         source_locale: existingOffer?.source_locale && isSupportedLocale(existingOffer.source_locale) ? existingOffer.source_locale : defaultLocale,
@@ -331,24 +341,8 @@ function OfferForm({
                 </div>
             )}
             <form onSubmit={submit} className="mt-3 flex flex-col gap-4">
-                <FormField label={t('common.price')} htmlFor="price" error={errors.price}>
-                    <Input
-                        type="number"
-                        min="0"
-                        max="9999999999.99"
-                        step="0.01"
-                        value={data.price}
-                        onChange={(e) => setData('price', e.target.value)}
-                    />
-                </FormField>
-
-                <FormField label={t('common.currency')} htmlFor="currency" error={errors.currency}>
-                    <Input
-                        type="text"
-                        maxLength={3}
-                        value={data.currency}
-                        onChange={(e) => setData('currency', e.target.value.toUpperCase())}
-                    />
+                <FormField label={t('requests.show.price_vnd_label')} htmlFor="price" error={errors.price}>
+                    <MoneyInput value={data.price} onChange={(value) => setData('price', value)} locale={locale} />
                 </FormField>
 
                 <FormField label={t('common.message')} htmlFor="message" error={errors.message}>

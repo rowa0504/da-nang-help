@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\DB;
 class UpdateOfferAction
 {
     /**
-     * @param  array{price: string|float, currency: string, message: string, available_at: ?string, source_locale: string}  $data
+     * $data never contains 'currency' — MVP is VND-only, always assigned
+     * below regardless of what the caller passes.
+     *
+     * @param  array{price: int|string, message: string, available_at: ?string, source_locale: string}  $data
      */
     public function handle(User $provider, Offer $offer, array $data): Offer
     {
@@ -34,7 +37,12 @@ class UpdateOfferAction
                 || $lockedOffer->service_request_id !== $lockedRequest->id
                 || $lockedOffer->provider_id !== $provider->id
                 || $lockedOffer->status !== OfferStatus::Pending
-                || $lockedRequest->status !== ServiceRequestStatus::Open) {
+                || $lockedRequest->status !== ServiceRequestStatus::Open
+                // MVP is VND-only: a legacy non-VND Offer can never be
+                // edited (not even via a direct Action call bypassing the
+                // HTTP layer) — re-verified here, after the lock, as the
+                // authoritative check.
+                || $lockedOffer->currency !== 'VND') {
                 throw new InvalidOfferTransitionException('This offer can no longer be edited.');
             }
 
@@ -42,6 +50,10 @@ class UpdateOfferAction
             $sourceLocaleChanged = $data['source_locale'] !== $lockedOffer->source_locale;
 
             $lockedOffer->fill($data);
+            // $data never contains 'currency' — already guaranteed VND by
+            // the guard above, but assigned explicitly so this Action stays
+            // the single source of truth regardless of $data's contents.
+            $lockedOffer->currency = 'VND';
             $lockedOffer->save();
 
             if ($messageChanged || $sourceLocaleChanged) {

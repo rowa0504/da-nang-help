@@ -24,6 +24,7 @@ return [
     'file' => ':attribute はファイルを指定してください。',
     'phone_number' => ':attribute の形式が正しくありません。数字・半角スペース・-・()・先頭の+のみ使用できます。',
     'photo_limit_exceeded' => '依頼に登録できる写真は最大:max枚までです。',
+    'prohibited' => ':attribute は入力できません。',
 
     'between' => [
         'numeric' => ':attribute は :min から :max の間で入力してください。',
@@ -47,5 +48,9 @@ return [
     'attributes' => [
         'other_service_details' => 'その他サービスの詳細',
         'phone' => '電話番号',
+        'price' => '価格',
+        'currency' => '通貨',
+        'message' => 'メッセージ',
+        'available_at' => '対応可能日時',
     ],
 ];

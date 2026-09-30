@@ -173,6 +173,7 @@ const vi: TranslationDictionary = {
     'requests.show.confirm_cancel': 'Hủy yêu cầu này? Hành động này không thể hoàn tác.',
     'requests.show.your_offer': 'Đề nghị của bạn',
     'requests.show.send_offer_heading': 'Gửi đề nghị',
+    'requests.show.price_vnd_label': 'Giá (VND)',
     'requests.show.edit_offer_heading': 'Sửa đề nghị của bạn',
     'requests.show.available_from_optional': 'Có thể bắt đầu từ (không bắt buộc)',
     'requests.show.offer_language_label': 'Ngôn ngữ của lời nhắn này',
@@ -198,7 +199,7 @@ const vi: TranslationDictionary = {
     'offers.index.empty_description': 'Báo giá từ các nhà cung cấp địa phương sẽ hiển thị ở đây khi họ phản hồi.',
     'offers.index.available_from': 'Có thể bắt đầu từ: {date}',
     'offers.index.provider_summary': '{business_name} · đánh giá {rating} · {count} công việc đã hoàn thành',
-    'offers.index.confirm_accept': 'Chấp nhận đề nghị {currency} {price} này? Hành động này không thể hoàn tác.',
+    'offers.index.confirm_accept': 'Chấp nhận đề nghị {amount} này? Hành động này không thể hoàn tác.',
     'offers.index.confirm_reject': 'Từ chối đề nghị này?',
 
     'provider.requests.index.title': 'Danh sách yêu cầu',

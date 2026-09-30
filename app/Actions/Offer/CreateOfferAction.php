@@ -24,7 +24,10 @@ use Illuminate\Support\Facades\DB;
 class CreateOfferAction
 {
     /**
-     * @param  array{price: string|float, currency: string, message: string, available_at: ?string, source_locale: string}  $data
+     * $data never contains 'currency' — MVP is VND-only, always assigned
+     * below regardless of what the caller passes.
+     *
+     * @param  array{price: int|string, message: string, available_at: ?string, source_locale: string}  $data
      */
     public function handle(User $provider, ServiceRequest $serviceRequest, array $data): Offer
     {
@@ -57,6 +60,10 @@ class CreateOfferAction
             $offer->service_request_id = $locked->id;
             $offer->provider_id = $provider->id;
             $offer->status = OfferStatus::Pending;
+            // MVP is VND-only: forced here regardless of what $data
+            // contains (CreateOfferRequest already rejects a client-sent
+            // currency, but this Action is the single source of truth).
+            $offer->currency = 'VND';
 
             try {
                 $offer->save();

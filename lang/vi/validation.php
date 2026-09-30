@@ -24,6 +24,7 @@ return [
     'file' => 'Trường :attribute phải là một tệp.',
     'phone_number' => 'Trường :attribute không hợp lệ. Chỉ được dùng chữ số, khoảng trắng, -, (), và tối đa một dấu + ở đầu.',
     'photo_limit_exceeded' => 'Yêu cầu dịch vụ chỉ được có tối đa :max ảnh.',
+    'prohibited' => 'Trường :attribute không được phép nhập.',
 
     'between' => [
         'numeric' => 'Trường :attribute phải nằm trong khoảng :min đến :max.',
@@ -47,5 +48,9 @@ return [
     'attributes' => [
         'other_service_details' => 'chi tiết dịch vụ khác',
         'phone' => 'số điện thoại',
+        'price' => 'giá',
+        'currency' => 'đơn vị tiền tệ',
+        'message' => 'tin nhắn',
+        'available_at' => 'thời gian có thể thực hiện',
     ],
 ];
