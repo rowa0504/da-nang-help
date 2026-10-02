@@ -13,4 +13,6 @@ return [
     'provider_profile_submitted' => 'Hồ sơ nhà cung cấp của bạn đã được gửi để xét duyệt.',
     'provider_profile_updated' => 'Các thay đổi của bạn đã được gửi để xét duyệt.',
     'service_request_updated' => 'Yêu cầu của bạn đã được cập nhật.',
+    'rate_limited_title' => 'Quá nhiều yêu cầu',
+    'rate_limited_body' => 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau :seconds giây.',
 ];

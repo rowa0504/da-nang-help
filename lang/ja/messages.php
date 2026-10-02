@@ -13,4 +13,6 @@ return [
     'provider_profile_submitted' => 'プロバイダープロフィールを審査のために送信しました。',
     'provider_profile_updated' => '変更内容を審査のために送信しました。',
     'service_request_updated' => '依頼内容を更新しました。',
+    'rate_limited_title' => 'リクエストが多すぎます',
+    'rate_limited_body' => 'リクエストが多すぎます。:seconds秒後に再度お試しください。',
 ];

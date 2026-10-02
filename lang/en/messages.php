@@ -13,4 +13,6 @@ return [
     'provider_profile_submitted' => 'Your provider profile has been submitted for review.',
     'provider_profile_updated' => 'Your changes have been submitted for review.',
     'service_request_updated' => 'Your request has been updated.',
+    'rate_limited_title' => 'Too Many Requests',
+    'rate_limited_body' => 'You have made too many requests. Please try again in :seconds seconds.',
 ];
