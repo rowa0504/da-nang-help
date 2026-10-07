@@ -24,6 +24,7 @@ return [
     'file' => ':attribute はファイルを指定してください。',
     'phone_number' => ':attribute の形式が正しくありません。数字・半角スペース・-・()・先頭の+のみ使用できます。',
     'photo_limit_exceeded' => '依頼に登録できる写真は最大:max枚までです。',
+    'max_utf8_bytes' => ':attribute はUTF-8エンコードで:maxバイト以内にしてください。',
     'prohibited' => ':attribute は入力できません。',
 
     'between' => [

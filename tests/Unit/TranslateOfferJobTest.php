@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Contracts\Translator;
 use App\Enums\TranslationStatus;
+use App\Exceptions\Translation\RetryableTranslationException;
 use App\Jobs\TranslateOfferJob;
 use App\Models\Offer;
 use App\Models\OfferTranslation;
@@ -202,5 +203,92 @@ class TranslateOfferJobTest extends TestCase
         ])->handle(app(Translator::class));
 
         $this->assertTrue(true);
+    }
+
+    public function test_retryable_exception_propagates_uncaught_instead_of_being_swallowed(): void
+    {
+        $offer = Offer::factory()->create();
+        $hash = OfferHasher::hash($offer->message, $offer->source_locale);
+        $this->pendingTranslation($offer, 'ja', $hash);
+
+        $retryable = new class implements Translator
+        {
+            public function translate(string $text, string $sourceLocale, string $targetLocale): string
+            {
+                throw new RetryableTranslationException('transient AWS error');
+            }
+        };
+
+        $job = app(TranslateOfferJob::class, [
+            'offerId' => $offer->id,
+            'targetLocale' => 'ja',
+            'sourceHash' => $hash,
+        ]);
+
+        $this->expectException(RetryableTranslationException::class);
+
+        $job->handle($retryable);
+    }
+
+    public function test_failed_hook_marks_a_still_pending_matching_hash_row_failed(): void
+    {
+        $offer = Offer::factory()->create();
+        $hash = OfferHasher::hash($offer->message, $offer->source_locale);
+        $this->pendingTranslation($offer, 'ja', $hash);
+
+        $job = app(TranslateOfferJob::class, [
+            'offerId' => $offer->id,
+            'targetLocale' => 'ja',
+            'sourceHash' => $hash,
+        ]);
+
+        $job->failed(new RetryableTranslationException('all retries exhausted'));
+
+        $translation = OfferTranslation::query()->where('offer_id', $offer->id)->first();
+        $this->assertSame(TranslationStatus::Failed, $translation->translation_status);
+    }
+
+    public function test_failed_hook_does_not_overwrite_an_already_completed_row(): void
+    {
+        $offer = Offer::factory()->create();
+        $hash = OfferHasher::hash($offer->message, $offer->source_locale);
+        $translation = $this->pendingTranslation($offer, 'ja', $hash);
+        $translation->update([
+            'translation_status' => TranslationStatus::Completed,
+            'message' => '[ja] already translated',
+            'translated_at' => now(),
+        ]);
+
+        $job = app(TranslateOfferJob::class, [
+            'offerId' => $offer->id,
+            'targetLocale' => 'ja',
+            'sourceHash' => $hash,
+        ]);
+
+        $job->failed(new RetryableTranslationException('a slower, now-stale attempt finally gave up'));
+
+        $fresh = $translation->fresh();
+        $this->assertSame(TranslationStatus::Completed, $fresh->translation_status);
+        $this->assertSame('[ja] already translated', $fresh->message);
+    }
+
+    public function test_failed_hook_discards_when_the_hash_is_stale(): void
+    {
+        $offer = Offer::factory()->create(['message' => 'Original message', 'source_locale' => 'en']);
+        $hash = OfferHasher::hash($offer->message, $offer->source_locale);
+        $this->pendingTranslation($offer, 'ja', $hash);
+
+        $offer->fresh()->update(['message' => 'Changed before retries were exhausted']);
+
+        $job = app(TranslateOfferJob::class, [
+            'offerId' => $offer->id,
+            'targetLocale' => 'ja',
+            'sourceHash' => $hash,
+        ]);
+
+        $job->failed(new RetryableTranslationException('stale by now'));
+
+        $translation = OfferTranslation::query()->where('offer_id', $offer->id)->first();
+        $this->assertSame(TranslationStatus::Pending, $translation->translation_status);
     }
 }

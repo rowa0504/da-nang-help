@@ -5,6 +5,7 @@ namespace App\Http\Requests\ServiceRequest;
 use App\Models\Area;
 use App\Models\Category;
 use App\Models\ServiceRequest;
+use App\Rules\MaxUtf8Bytes;
 use Closure;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -41,7 +42,9 @@ class UpdateServiceRequestRequest extends FormRequest
 
         return [
             'title' => ['required', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:5000'],
+            // See CreateServiceRequestRequest for why the byte-based rule
+            // is needed alongside the character-based max:5000.
+            'description' => ['required', 'string', 'max:5000', new MaxUtf8Bytes(10_000)],
             'category_id' => [
                 'required',
                 'integer',

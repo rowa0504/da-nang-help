@@ -24,6 +24,7 @@ return [
     'file' => 'Trường :attribute phải là một tệp.',
     'phone_number' => 'Trường :attribute không hợp lệ. Chỉ được dùng chữ số, khoảng trắng, -, (), và tối đa một dấu + ở đầu.',
     'photo_limit_exceeded' => 'Yêu cầu dịch vụ chỉ được có tối đa :max ảnh.',
+    'max_utf8_bytes' => 'Trường :attribute không được vượt quá :max byte khi mã hóa UTF-8.',
     'prohibited' => 'Trường :attribute không được phép nhập.',
 
     'between' => [

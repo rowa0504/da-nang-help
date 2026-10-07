@@ -144,6 +144,57 @@ class ServiceRequestTest extends TestCase
         $response->assertInvalid(['address_text']);
     }
 
+    /**
+     * description has both a character limit (max:5000, checked
+     * elsewhere) and this separate byte limit (MaxUtf8Bytes(10_000)):
+     * Amazon Translate's TranslateText API rejects input over 10,000
+     * UTF-8 bytes, and Japanese/Vietnamese text can run 3-4 bytes per
+     * character, so a submission well under 5,000 characters can still
+     * exceed 10,000 bytes.
+     */
+    public function test_description_at_exactly_ten_thousand_utf8_bytes_succeeds(): void
+    {
+        $customer = User::factory()->create();
+        // 'é' is 2 bytes in UTF-8: 5,000 characters (right at the
+        // pre-existing max:5000 character limit) x 2 bytes = exactly
+        // 10,000 bytes (right at the new byte limit) - both boundaries at
+        // once, deliberately.
+        $description = str_repeat('é', 5_000);
+        $this->assertSame(5_000, mb_strlen($description));
+        $this->assertSame(10_000, strlen($description));
+
+        $response = $this->actingAs($customer)->post('/requests', $this->payload(['description' => $description]));
+
+        $serviceRequest = ServiceRequest::query()->where('customer_id', $customer->id)->firstOrFail();
+        $response->assertRedirect(route('requests.show', $serviceRequest));
+        $this->assertSame(10_000, strlen($serviceRequest->fresh()->description));
+    }
+
+    public function test_description_one_byte_over_ten_thousand_utf8_bytes_is_rejected(): void
+    {
+        $customer = User::factory()->create();
+
+        $response = $this->actingAs($customer)->post('/requests', $this->payload(['description' => str_repeat('a', 10_001)]));
+
+        $response->assertInvalid(['description']);
+    }
+
+    public function test_description_with_multibyte_characters_under_the_character_limit_but_over_the_byte_limit_is_rejected(): void
+    {
+        $customer = User::factory()->create();
+
+        // 3,334 Japanese characters: well under max:5000 characters, but
+        // "あ" is 3 bytes in UTF-8, so this is 10,002 bytes - over the
+        // byte limit despite passing the character limit easily.
+        $description = str_repeat('あ', 3_334);
+        $this->assertLessThan(5000, mb_strlen($description));
+        $this->assertSame(10_002, strlen($description));
+
+        $response = $this->actingAs($customer)->post('/requests', $this->payload(['description' => $description]));
+
+        $response->assertInvalid(['description']);
+    }
+
     public function test_more_than_five_photos_is_rejected(): void
     {
         $customer = User::factory()->create();
@@ -922,6 +973,37 @@ class ServiceRequestTest extends TestCase
         $translation = ServiceRequestTranslation::where('service_request_id', $serviceRequest->id)->where('locale', 'ja')->firstOrFail();
         $this->assertSame(TranslationStatus::Pending, $translation->translation_status);
         Queue::assertPushed(TranslateServiceRequestJob::class);
+    }
+
+    public function test_update_description_one_byte_over_ten_thousand_utf8_bytes_is_rejected(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+
+        $response = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['description' => str_repeat('a', 10_001)])
+        );
+
+        $response->assertInvalid(['description']);
+    }
+
+    public function test_update_description_at_exactly_ten_thousand_utf8_bytes_succeeds(): void
+    {
+        $customer = User::factory()->create();
+        $serviceRequest = ServiceRequest::factory()->forCustomer($customer)->create();
+        // See test_description_at_exactly_ten_thousand_utf8_bytes_succeeds
+        // for why 'é' x 5,000 hits both the character and byte limits at
+        // once.
+        $description = str_repeat('é', 5_000);
+
+        $response = $this->actingAs($customer)->patch(
+            "/requests/{$serviceRequest->id}",
+            $this->editPayload($serviceRequest, ['description' => $description])
+        );
+
+        $response->assertRedirect(route('requests.show', $serviceRequest));
+        $this->assertSame($description, $serviceRequest->fresh()->description);
     }
 
     public function test_category_area_address_urgency_only_changes_do_not_touch_translations(): void

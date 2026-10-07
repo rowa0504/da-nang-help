@@ -3,11 +3,14 @@
 namespace App\Providers;
 
 use App\Contracts\Translator;
+use App\Services\Translation\AwsTranslateTranslator;
 use App\Services\Translation\FakeTranslator;
+use Aws\Translate\TranslateClient;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -16,10 +19,44 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // FakeTranslator is local/testing-only (see its docblock). Swap
-        // this binding for a real Amazon Translate implementation before
-        // going to production.
-        $this->app->bind(Translator::class, FakeTranslator::class);
+        // Only actually constructed if something resolves Translator::class
+        // to AwsTranslateTranslator below — i.e. never in local/testing's
+        // default TRANSLATOR_DRIVER=fake, so no AWS region/credential
+        // resolution is ever attempted there.
+        $this->app->singleton(TranslateClient::class, function () {
+            return new TranslateClient([
+                'version' => 'latest',
+                'region' => config('services.translate.region'),
+                // No explicit 'credentials' option: resolved via the AWS
+                // SDK's default provider chain (an ECS Task Role in
+                // production; a developer's exported IAM Identity
+                // Center/STS temporary credentials for local manual
+                // verification). An API key is never read here.
+                'retries' => [
+                    'mode' => 'standard',
+                    // Total attempts including the first, per the SDK's
+                    // own documented meaning of this option.
+                    'max_attempts' => 3,
+                ],
+                'http' => [
+                    // Kept short so that even 3 'retries' above cannot
+                    // together exceed TranslateServiceRequestJob/
+                    // TranslateOfferJob's own 60s $timeout.
+                    'connect_timeout' => 5,
+                    'timeout' => 10,
+                ],
+            ]);
+        });
+
+        $this->app->singleton(Translator::class, function () {
+            return match (config('services.translate.driver')) {
+                'fake' => new FakeTranslator(),
+                'aws' => new AwsTranslateTranslator($this->app->make(TranslateClient::class)),
+                default => throw new InvalidArgumentException(
+                    'Unsupported TRANSLATOR_DRIVER value ['.var_export(config('services.translate.driver'), true)."]. Expected 'fake' or 'aws'."
+                ),
+            };
+        });
     }
 
     /**

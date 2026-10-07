@@ -28,6 +28,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Separate from APP_ENV on purpose: verifying AwsTranslateTranslator
+    // against the real Amazon Translate API (via IAM Identity Center/STS
+    // temporary credentials) is something done *from* a local environment,
+    // so it cannot be tied to APP_ENV=local meaning "always fake". Testing
+    // always forces 'fake' via phpunit.xml, regardless of this env var.
+    'translate' => [
+        'driver' => env('TRANSLATOR_DRIVER', 'fake'),
+        'region' => env('AWS_DEFAULT_REGION', 'ap-southeast-1'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

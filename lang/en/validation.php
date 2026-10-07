@@ -29,6 +29,7 @@ return [
     'file' => 'The :attribute field must be a file.',
     'phone_number' => 'The :attribute field must be a valid phone number (digits, spaces, -, (), and an optional leading + only).',
     'photo_limit_exceeded' => 'A service request may have at most :max photos.',
+    'max_utf8_bytes' => 'The :attribute field must not exceed :max bytes when encoded as UTF-8.',
     'prohibited' => 'The :attribute field is prohibited.',
 
     'between' => [
