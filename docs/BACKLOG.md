@@ -27,10 +27,10 @@ Draft v0.4（[BLUEPRINT.md](BLUEPRINT.md)）で「MVP機能実装完了」と位
   - 上限超過時は、翻訳キュー投入や写真のStorage保存より前に拒否される（無駄な副作用を発生させない）
 
 ### P0-2. Amazon Translate実装
-- 状態: 実装済み・AWS疎通確認待ち（`AwsTranslateTranslator`・`TRANSLATOR_DRIVER`環境変数による切り替え・Job側のリトライ（3回・60秒）・エラー分類・`MaxUtf8Bytes`バリデーションルールまで実装・単体/Featureテスト済み。IAM Identity Center/STSの一時認証情報を用いた実Amazon Translate APIへの疎通確認はまだ実施していないため「完了」にはしない）
+- 状態: 完了（`AwsTranslateTranslator`・`TRANSLATOR_DRIVER`環境変数による切り替え・Job側のリトライ（3回・60秒）・エラー分類・`MaxUtf8Bytes`バリデーションルールを実装し、単体/Featureテストで確認済み。IAM Identity Centerの一時認証情報を用いた実Amazon Translate APIへの疎通確認（短文1回のみ、`.env`・ログ・DB・キューへの混入なし）も完了。課金影響は1回のみの短文呼び出しのため無視できる程度だが、無料枠の適用状況により厳密な0円は保証しない）
 - 優先度: P0
 - 関連FR/NFR: FR-18〜23a、[15 技術アーキテクチャ案](BLUEPRINT.md#15-技術アーキテクチャ案)「機械翻訳」
-- 完了条件: 本番環境で`TRANSLATOR_DRIVER=aws`に切り替え、ECS Task Role経由でのアクセス・文字数上限・レート制限・予算アラートが機能することを実AWS接続で確認する
+- 完了条件: `Translator`インターフェースをAmazon Translateの実装（`AwsTranslateTranslator`）へ差し替え、IAM Identity Center/STSの一時認証情報を用いた実APIへの疎通確認・文字数上限・リトライ/エラー分類の自動テストが完了していること（確認済み）。ECS Task Role経由でのアクセス確認・AWS Budgets予算アラートは、AWSインフラ構築後の本番デプロイ時に別途確認する（P0-3・`docs/RELEASE_PLAN.md`フェーズB/Cの範囲）
 
 ### P0-3. AWSインフラ（Stage 1）
 - 状態: 未着手（ローカル`docker-compose.yml`のみ存在、IaC・Terraform等なし）
