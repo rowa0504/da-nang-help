@@ -45,7 +45,7 @@ AWSインフラの有無に関わらず着手できる項目です。インフ�
 |---|---|
 | コンピュート方式 | **Fargate + ALBを維持**。EC2への切り替えは行わない |
 | 理由 | EC2との差額（概算$5〜25/月）よりも、ECS/Fargate/ALBの実践学習の価値を優先。月額の差分で運用負荷（OSパッチ・Docker自前管理・障害復旧の自前実装）を引き受けるコストの方が大きいと判断 |
-| 月額予算 | **通常目標 $80/月以内、上限 $100/月**（異常時含む）。**$80は努力目標であり、初期構築時（4コンテナを同一Taskで動かすため最初は1vCPU/2GBで検証する想定、4.4節参照）には一時的に超過し得る** |
+| 月額予算 | **通常目標 $90/月以内、上限 $100/月**（異常時含む）。4.4節のAWS Price List API実単価再計算により、初回構築サイズを0.5vCPU/2GBとすることで通常時この範囲に収まる見込み |
 | NAT Gateway | **Stage 1では不採用**（public subnet + Task Public IP + Security Groupで代替） |
 | 常設ステージング環境 | **作らない**。検証が必要な時だけ一時的に構築し、終わったら削除してコストを抑える |
 | インフラ作成前の必須ゲート | **AWS Pricing Calculatorによる最終見積もり**を取得し、下記4.4の月額目安と大きく乖離しないことを確認してから着手する |
@@ -113,43 +113,56 @@ flowchart LR
 
 これらはフェーズCで実装します。
 
-### 4.4 コスト試算（Singapore/ap-southeast-1、概算）
+### 4.3.1 初期Fargateサイズと増量方針（今回の確定事項）
 
-AWS Pricing Calculatorでの最終確認を前提とした、計画時点の目安です。**4コンテナ（Nginx・PHP-FPM・Worker・Scheduler）を同一Task内で動かすため、初回構築時はまず1vCPU/2GBで検証し、実測後に0.5vCPU/1GBへ縮小できるか判断するのが安全です**（先に縮小構成だけを前提にしない）。
+4.4節のコスト再計算に基づき、**初期Taskサイズは0.5 vCPU / 2GBとします**（AWS公式仕様上、0.5 vCPU（512 CPU units）は1GB・2GB・3GB・4GBのいずれのメモリも選択可能）。4コンテナ（Nginx・PHP-FPM・Queue Worker・画像処理を伴うPHP-FPM）構成では、CPU不足よりもメモリ不足が先に問題化しやすいため、CPUを最小の0.5 vCPUに保ったままメモリだけを2GBへ上げる構成が、コストと安全余裕のバランスが最も良い開始点です。
+
+- **desiredCount = 1**（4.3節の可用性の割り切りを継続）
+- 各コンテナ（Nginx・PHP-FPM・Worker・Scheduler）に`memory`（limit）と`memoryReservation`（soft limit）を設定し、Task全体のメモリをコンテナ間でどう配分するかを明示する
+- CloudWatchで**Task CPU Utilization・Task Memory Utilization・Taskの停止理由（`stoppedReason`、特にOOM Killによる停止）**を監視する（D-2のエラー監視・ヘルスチェックと合わせて実施）
+- **増量が必要になった場合の判断基準**:
+  - メモリ使用率が高止まりする、またはOOM Killによる停止が発生した場合 → まず**0.5 vCPU / 3GBまたは4GB**へ増量する（CPUは変更しない）
+  - CPU使用率が高止まりする場合に限り → **1 vCPU / 2GB以上**へ変更する
+- 先にCPUを上げる、または1 vCPU/2GBから開始する判断は行いません（4.4節の再計算により$100/月の上限を超えるリスクが高いため）
+
+### 4.4 コスト試算（Singapore/ap-southeast-1）
+
+当初の概算をAWS公式Price List API（calculator.aws・各サービスの公式価格ページと同一の正規データソース、取得日2026-10-14）の実単価で再計算しました。この再計算は構成選定に十分な精度がありますが、**RELEASE_PLAN.mdが必須ゲートとしているcalculator.awsでの共有見積もり作成自体は省略せず、Terraform適用直前の最終ダブルチェックとして別途実施します**（4.6節参照）。
+
+取得した実単価（ap-southeast-1）: Fargate $0.050560/vCPU時間・$0.005530/GB時間、ALB $0.0252/時間+$0.008/LCU時間、Public IPv4 $0.005/時間/個、RDS db.t4g.micro $0.025/時間+gp3ストレージ$0.138/GB月、S3 $0.025/GB月、CloudWatch Logs $0.70/GB（取り込み）+$0.03/GB月（保存）、Route 53 $0.50/月+$0.40/100万クエリ、Amazon Translate $15.00/100万文字（リージョン差なし）、SES $0.10/1,000件（従量課金、プラン未加入）。
 
 | 項目 | 月額目安 | 備考 |
 |---|---|---|
-| ALB（基本料金+LCU+**Public IPv4料金**） | 〜$20〜25 | ALBの固定時間課金・LCU従量に加え、Public IPv4アドレスへの時間課金が別途発生する点に注意 |
-| RDS db.t4g.micro（Single-AZ、MySQL） | 〜$18〜20 | ストレージ込み概算。**T4g/T3は無料CPUクレジットのベースラインを超えると追加のCPUクレジット課金が発生**するため、継続的に高負荷が続く場合は想定より増額し得る |
-| S3・ECR・Route 53・CloudWatch Logs・データ転送・**Fargate TaskのPublic IPv4** | 〜$5〜10 | いずれも少額だが個別に発生。Fargate Taskも（ALBと同様に）Public IPを持つため、ALB分とは別にTask側のPublic IPv4課金が発生する点に注意 |
-| Amazon Translate・SES | 〜$1〜6 | 低トラフィックのソフトローンチ初期は少額想定。Translateの文字数上限・レート制限はA-2で設計 |
+| ALB（基本料金$18.40+LCU概算$5.84） | 〜$24.24 | LCUは実使用量に応じた課金のため、低トラフィックのソフトローンチ直後はこれより低くなり得る保守的な想定 |
+| Public IPv4（ALB×2 AZ＋Fargate Task×1＝3個） | 〜$10.95 | ALBは有効なAZごとに1つのPublic IPv4を持つため、2 AZ構成で2個＋Task分1個。旧概算では他の少額項目に紛れて過小評価されていた |
+| RDS db.t4g.micro（Single-AZ、MySQL、ストレージ20GB想定） | 〜$21.01 | **T4g/T3は無料CPUクレジットのベースラインを超えると追加のCPUクレジット課金が発生**するため、継続的に高負荷が続く場合は想定より増額し得る |
+| S3・ECR・Route 53・CloudWatch Logs・データ転送 | 〜$2.33 | いずれも少額（低利用想定） |
+| Amazon Translate・SES | 〜$1.55〜$7.50 | 低トラフィックのソフトローンチ初期の想定。Translateの文字数上限・レート制限はA-2で実装済み |
 | NAT Gateway | $0 | **不採用のため課金なし**（採用した場合は基本料金だけで月額約$32.40、データ処理料金が別途加算されるため、Stage 1では明確に不採用とする根拠とする） |
 
-| Fargateのサイズ | Fargate月額目安 | 上記合計との総計 |
-|---|---|---|
-| **1vCPU/2GB（初回構築・検証時はこちらを前提）** | 〜$43 | **約$87〜104/月** |
-| 0.5vCPU/1GB（実測後、縮小できると判断した場合） | 〜$22 | **約$66〜83/月** |
+| Fargateのサイズ | Fargate月額目安 | 上記合計との総計 | 判定 |
+|---|---|---|---|
+| **0.5 vCPU / 2GB（初期構築はこちらを採用、4.3.1節）** | 〜$26.53 | **約$86.61〜92.56/月** | 通常目標$90・上限$100の両方に収まる |
+| 0.5 vCPU / 1GB（メモリ余裕なし） | 〜$22.49 | 約$82.57〜88.52/月 | 収まるが、PHP-FPM・Worker・画像処理の同時実行でメモリ不足のリスクが高い |
+| 1 vCPU / 2GB（CPU高止まり時のみ変更） | 〜$44.98 | **約$105.06〜110.01/月** | **上限$100/月を超える**ため初期構築では採用しない |
 
-上限$100/月に対し、1vCPU/2GBでの初回構築時点では既にほぼ上限付近（最大$104）となり得ます。**実測後、速やかに0.5vCPU/1GBへ縮小できるか検証し、$80/月の通常目標内へ収める**ことを初期運用のタスクとして扱ってください（D-2のモニタリングと合わせて実施）。
+**上振れ要因**（Pricing Calculatorの見積もりには現れない、実運用で発生し得るもの）: RDSのCPUクレジット超過、CloudWatch Logsのログ量増加、データ転送量の増加、ECSローリングデプロイ中に新旧Taskが一時的に2つ同時稼働する時間帯。これらを踏まえ、通常目標は$90/月以内、上限$100/月とし、AWS Budgetsのしきい値を4.5節のとおり調整します。
 
 ### 4.5 AWS Budgets通知設定
 
 | しきい値 | 意味 |
 |---|---|
 | $50 | 早期確認（想定の半分を超えた時点で傾向を把握） |
-| $80 | 通常目標超過（原因調査を開始） |
+| $90 | 通常目標超過（原因調査を開始） |
 | $100 | 即時調査（上限到達、緊急対応） |
 
 AWS Budgetsは支出を自動停止する仕組みではなく通知のみである点は[BLUEPRINT.md](BLUEPRINT.md#amazon-translateの費用制御)に明記済みの前提を踏襲します。
 
 ### 4.6 フェーズBの作業項目
 
-1. AWS Pricing Calculatorで4.4の試算を検証（**インフラ作成の必須ゲート**、1vCPU/2GB想定で$100/月を明確に超える場合は着手前に構成を見直す）
+1. AWS Pricing Calculator（calculator.aws）で0.5vCPU/2GB構成の共有見積もりを作成し、4.4節のPrice List API再計算（約$86.61〜92.56/月）と大きく乖離しないことを確認する（**実リソース作成・Terraform適用直前の必須ゲート**。$100/月を明確に超える場合は着手前に構成を見直す）
 2. AWS Budgets通知の設定（4.5）
-3. インフラはTerraform等のIaCで管理する（手動コンソール操作に頼らず、7節の一時検証環境を確実に作成・削除できるようにするため）。あわせて以下を決定する:
-   - Terraform stateの保存場所（例: S3バックエンド）・暗号化・排他制御（state lock）
-   - staging（7節の一時検証環境）とproductionでstateを分離する（同一stateを使い回さない）
-   - DBパスワード・`APP_KEY`等の秘密値は、Terraformコード・変数ファイル・**state**のいずれにも平文で残さない。Parameter StoreのSecureStringをTerraformで「作成」しても、投入した値自体がstateに残り得る点に注意し、**値の投入（書き込み）はTerraform経由で行わず**、CIのsecret機能、または管理者による安全な初期登録手順（D-3と同様の運用）として別途定義する
+3. インフラはTerraform等のIaCで管理する（手動コンソール操作に頼らず、7節の一時検証環境を確実に作成・削除できるようにするため）。state管理方式の確定内容は4.7節を参照
 4. VPC・サブネットの作成。**AZ要件に注意**:
    - ALBには異なるAZのpublic subnetが最低2つ必要
    - RDS DB Subnet GroupにはSingle-AZ配置であっても、異なるAZのsubnetを最低2つ登録する必要がある（「Single-AZだからsubnetも1つ」ではない）
@@ -170,6 +183,121 @@ AWS Budgetsは支出を自動停止する仕組みではなく通知のみであ
 12. ALBの作成（public subnet、ACM証明書をHTTPSリスナーへ紐付け）
 13. Route 53 Hosted Zoneとドメインの紐付け
 14. CloudWatch Logsのロググループにretention期間を設定（無期限保存を避ける）
+
+### 4.7 Terraform state管理設計（確定）
+
+#### 4.7.1 ディレクトリ構成
+
+```
+infra/terraform/
+  modules/
+    network/      # VPC, 2 public + 2 private subnet, IGW, route table
+    security/     # Security Group（ALB→Task、Task→RDS）
+    iam/          # Task Execution Role, Task Role
+    ecr/
+    rds/
+    s3/
+    alb/
+    ecs/          # Cluster, Task Definition, Service
+    dns/          # Route 53, ACM
+    monitoring/   # CloudWatch Logs, Alarms, Budgets
+  environments/
+    production/
+      backend.tf
+      main.tf            # モジュール呼び出し
+      variables.tf
+      terraform.tfvars   # 機密値を含まない設定のみ、Git管理
+    staging/
+      backend.tf         # productionと別のstate key
+      main.tf            # 同じmodulesを再利用、7節の一時検証用
+      variables.tf
+      terraform.tfvars
+```
+
+production/stagingはTerraform workspaceで切り替えるのではなく、**ディレクトリと`backend.tf`自体を分離**します。workspaceはバックエンド設定を共有したまま状態ファイルだけ切り替える仕組みのため、誤ったworkspaceに対してapplyしてしまう事故のリスクがあります。
+
+#### 4.7.2 Stateバックエンド
+
+```hcl
+# environments/production/backend.tf
+terraform {
+  required_version = ">= 1.10.0, < 2.0.0"
+
+  backend "s3" {
+    bucket       = "dananghelp-terraform-state-<一意なsuffix>"
+    key          = "production/terraform.tfstate"
+    region       = "ap-southeast-1"
+    encrypt      = true
+    use_lockfile = true   # Terraform 1.10+のネイティブS3ロック（DynamoDB不要、今後段階的に廃止予定とされる旧方式を新規採用しない）
+  }
+}
+# environments/staging/backend.tf は bucket は同一、key = "staging/terraform.tfstate" のみ変更
+```
+
+- **バージョン制約**: `>= 1.10.0`だけでは将来のTerraform 2.x系も許容してしまうため、`< 2.0.0`の上限を明記する
+- **バケット名**: `dananghelp-terraform-state`はS3全体でグローバルに一意である必要があり、実際の名前は着手時にAWS CLIで空き確認した一意なsuffixを付けて確定する（AWSアカウントIDは秘密ではないがリポジトリへ積極的に載せる必要もないため、ランダムなsuffixを推奨）
+- **ロック**: Terraform 1.10以降のS3ネイティブロック（`use_lockfile = true`、stateと同じバケットに`.tflock`ファイルを作成）を採用。DynamoDBテーブルは追加しない
+
+#### 4.7.3 Stateバケットのセキュリティ設定（bootstrapスクリプトで作成）
+
+Terraform管理対象外（循環を避けるため）とし、一度だけ再実行可能なbootstrapスクリプトで作成する。スクリプトには以下をすべて含める:
+
+- バケット作成（`ap-southeast-1`）
+- バージョニング有効化
+- デフォルト暗号化（SSE-S3）
+- パブリックアクセスブロック（4項目すべて`true`）
+- **HTTPS強制のバケットポリシー**（`aws:SecureTransport=false`の場合に明示的に`Deny`。SSE-S3・バージョニング・パブリックアクセスブロックだけでは不十分で、AWS公式も推奨する設定）
+- 非現行バージョン（noncurrent version）の保持期間を設定するlifecycle policy（即時削除ではなく、例えば365日後に削除）
+- 作成後の検証コマンド（バージョニング・暗号化・パブリックアクセスブロック・バケットポリシーが実際に反映されたことを`aws s3api get-*`系コマンドで確認）
+- スクリプト内コメントとして「このバケットは削除禁止・用途（Terraform state保存専用）」を明記
+
+Object LockやMFA Deleteは、現在の小規模構成では運用の複雑化に見合わないため採用しません。
+
+#### 4.7.4 IAM権限の分離
+
+**Terraform実行ロール**（ECSのTask Execution Role/Task Roleとは別物。ローカル実行・CI実行の両方で使うロール）に必要な権限を、対象ごとに最小化します。
+
+| 対象 | 必要な権限 | 備考 |
+|---|---|---|
+| バケット自体 | `s3:ListBucket` | バケットレベル |
+| state本体（`<env>/terraform.tfstate`） | `s3:GetObject`、`s3:PutObject` | `s3:DeleteObject`は通常不要 |
+| lockfile（`<env>/terraform.tfstate.tflock`） | `s3:GetObject`、`s3:PutObject`、`s3:DeleteObject` | ロック解放時に削除が必要なため、state本体と権限セットが異なる |
+
+production用CIロールは`production/*`パスのみ、staging用CIロールは`staging/*`パスのみに制限し、相互にアクセスできないようにします。
+
+**認証情報の扱い**: `backend.tf`に`profile`や`access_key`/`secret_key`を直接書きません。ローカル実行では`AWS_PROFILE`環境変数（例: `danang-help-admin`、A-2で既に使用したIAM Identity Centerプロファイル）、CI実行ではGitHub Actions OIDCによる一時クレデンシャル（長期アクセスキーを持たない、4.6節・RELEASE_PLAN全体の既存方針と一致）を使用します。
+
+#### 4.7.5 秘密情報の境界（表現の訂正）
+
+旧版の「stateに秘密値が一切含まれない」という表現は不正確です。正確には以下のとおりです。
+
+> **`DB_PASSWORD`・`APP_KEY`等のアプリケーション秘密値をTerraformへ渡さず、stateへ保存しない。**
+
+Terraform state自体には、RDSのエンドポイント・各リソースのARN・IAM情報など、公開すべきでないインフラ情報が残ります。そのため秘密値を含めない設計であっても、**state自体を機密性のあるデータとして扱い、4.7.2〜4.7.4の暗号化・アクセス制限を厳格に維持する**ことが必要です（Terraform公式もstateを機密データとして扱うことを推奨）。
+
+具体的な境界:
+- `SecureString`パラメータ（`DB_PASSWORD`・`APP_KEY`等）は、**値だけでなくパラメータリソース自体もTerraformで作成しません**。IAMポリシー側はパス単位のワイルドカード（例: `arn:aws:ssm:ap-southeast-1:<account-id>:parameter/dananghelp/production/*`）で権限を付与するため、Terraformが個々の`SecureString`パラメータの存在を知る必要がありません
+- 実際のパラメータ作成・値投入は、D-3と同様に管理者が手動で行う運用手順として別途文書化します。**値はCLIの引数へ直書きしない**（シェル履歴・プロセス一覧に残るため、`--cli-input-json`や標準入力経由の投入方法を手順化する）
+- カスタマー管理KMSキーを使う場合、Task Execution RoleのIAMポリシーに`kms:Decrypt`が必要なことに加え、**KMSキーポリシー側でも同Roleへの許可が別途必要**（AWS管理キー`alias/aws/ssm`使用時はIAMポリシーのみで足りる）
+- SSMパラメータをコンテナ起動時の環境変数へ注入する権限（ECSタスク定義の`secrets`フィールド解決）は、実行中のアプリケーションコードが使う**Task Roleではなく、起動時処理を行うTask Execution Role側**へ付与する（4.6節項目6の既存区分と一致）
+- 非機密な設定値（`APP_URL`等の`String`タイプパラメータ）はTerraformで管理してよい
+
+#### 4.7.6 Git管理
+
+```
+# .gitignore へ追加
+.terraform/
+*.tfstate*
+*.tfplan
+crash.log
+*.auto.tfvars
+*.tfvars.json
+override.tf
+*_override.tf
+```
+
+- `terraform.tfvars`（非機密値のみ）は例外的にGit管理する
+- `.terraform.lock.hcl`（プロバイダのバージョン固定）はGit管理する
 
 ## 5. フェーズC — デプロイ機構
 
