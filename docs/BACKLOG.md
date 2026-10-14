@@ -81,10 +81,10 @@ Draft v0.4（[BLUEPRINT.md](BLUEPRINT.md)）で「MVP機能実装完了」と位
 - 完了条件: 致命的エラーがCloudWatch等へ集約され、アラート通知が届く。ALBのヘルスチェックが正しくTaskの異常を検知する
 
 ### P0-11. 利用規約・プライバシーポリシー
-- 状態: 未着手
+- 状態: 実装済み・法務情報確定および専門家レビュー待ち（en/ja/vi 3言語の草案本文・`/terms`・`/privacy`ページ・登録フローでの年齢確認および法的文書への同意・確認（`age_confirmed`／`agree_to_legal`の2チェックボックス）・同意記録（`age_confirmed_at`／`terms_accepted_at`・`terms_version`／`privacy_acknowledged_at`・`privacy_version`）まで実装・自動テスト済み。運営者名・問い合わせ先（`LEGAL_OPERATOR_NAME`／`LEGAL_CONTACT_EMAIL`）は本番未設定、規約・プライバシーポリシーの`version`／`effective_date`も`config/legal.php`上でdraft/null、準拠法上の管轄も未確定のため「完了」にはしない。`php artisan legal:check`（`App\Support\Legal\LegalConfigurationValidator`）が本番相当でこれらを検出して失敗することを確認済み）
 - 優先度: P0
 - 関連FR/NFR: [10 非機能要件](BLUEPRINT.md#10-非機能要件)「プライバシー」
-- 完了条件: en/ja/viで利用規約・プライバシーポリシーが用意され、登録フローから閲覧・同意できる
+- 完了条件: en/ja/viで利用規約・プライバシーポリシーが用意され、登録フローから閲覧・同意できる（実装・自動テストは確認済み）。運営者名・問い合わせ先・規約/ポリシーの発効日・バージョン・準拠法上の管轄が確定し、`php artisan legal:check`が合格し、ベトナム法専門家によるレビューを経ていること（政令356/2025/ND-CPに基づくDPIA・越境移転影響評価（CBTIA）の作成・届出は別途P0-3のAWSインフラ構築・本番公開ゲートとして扱う）
 
 ### P0-12. 管理者アカウントの安全な初期作成手順
 - 状態: 未着手（開発はtinker等での直接作成）

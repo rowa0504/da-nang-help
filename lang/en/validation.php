@@ -31,6 +31,7 @@ return [
     'photo_limit_exceeded' => 'A service request may have at most :max photos.',
     'max_utf8_bytes' => 'The :attribute field must not exceed :max bytes when encoded as UTF-8.',
     'prohibited' => 'The :attribute field is prohibited.',
+    'accepted' => 'You must accept the :attribute field.',
 
     'between' => [
         'numeric' => 'The :attribute field must be between :min and :max.',
@@ -58,5 +59,7 @@ return [
         'currency' => 'currency',
         'message' => 'message',
         'available_at' => 'available date and time',
+        'age_confirmed' => 'age confirmation',
+        'agree_to_legal' => 'Terms of Service and Privacy Policy agreement',
     ],
 ];

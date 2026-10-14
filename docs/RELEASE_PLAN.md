@@ -33,7 +33,7 @@ AWSインフラの有無に関わらず着手できる項目です。インフ�
 |---|---|---|
 | A-1 書き込み系エンドポイントのレート制限 | 登録・依頼投稿・Offer送信・写真アップロード等 | [BACKLOG.md P0-1](BACKLOG.md#p0-1-書き込み系エンドポイントのレート制限) |
 | A-2 Amazon Translate実装 | `FakeTranslator`→本番実装への差し替え。AWSインフラ構築前でも疎通確認・実装・自動テストは可能。**IAM Identity Centerまたは一時認証情報（STSの一時クレデンシャル）を利用して先行検証する。長期アクセスキーを持つ開発用IAMユーザーは原則作成しない**（詳細は4.6節） | [BACKLOG.md P0-2](BACKLOG.md#p0-2-amazon-translate実装) |
-| A-3 利用規約・プライバシーポリシー | en/ja/vi 3言語。**草案段階では専門家未レビューであることを本ドキュメント上で記録する。実ユーザーを受け入れるソフトローンチ前に、ベトナム法・個人情報の越境処理を含め、必要に応じて専門家の確認を受ける**（未レビューである旨を公開ポリシー本文へ表示する必要はない） | [BACKLOG.md P0-11](BACKLOG.md#p0-11-利用規約プライバシーポリシー) |
+| A-3 利用規約・プライバシーポリシー | en/ja/vi 3言語。実装・自動テストは完了済み（登録フローでの年齢確認・法的文書への同意、`config/legal.php`によるversion/effective_date/governing_localeの一元管理、`php artisan legal:check`による本番公開前チェック）。**草案段階では専門家未レビューであることを本ドキュメント上で記録する。実ユーザーを受け入れるソフトローンチ前に、ベトナム法・個人情報の越境処理（政令356/2025/ND-CPに基づくDPIA・越境移転影響評価）を含め、必要に応じて専門家の確認を受ける**（未レビューである旨を公開ポリシー本文へ表示する必要はない）。運営者名・問い合わせ先・発効日・準拠法上の管轄の確定も、legal:checkが合格する前提として別途必要 | [BACKLOG.md P0-11](BACKLOG.md#p0-11-利用規約プライバシーポリシー) |
 
 この3項目は、フェーズB（AWS基盤）の着手を待たずに先行して計画・実装を進めて構いません。
 
@@ -195,9 +195,12 @@ AWS Budgetsは支出を自動停止する仕組みではなく通知のみであ
 4. 新しいECS Task Definitionを登録する（**この時点ではまだ稼働中のServiceへは反映しない**）
 5. 4で登録した新Task Definitionを使って、**migration one-off task**（`aws ecs run-task`、常駐Serviceとは別の一時起動）として`php artisan migrate --force`を実行する
 6. migrationの成功を待機する。**失敗した場合はここでパイプラインを中断し、以降のステップへ進まない**（Task Definitionは4で登録済みだが、ECS Serviceは古いTask Definitionのまま稼働を継続している — 「登録」と「切り替え」を分けているため、失敗時に何も壊れていない）
-7. migrationが成功した場合のみ、ECS Serviceを新Task Definitionへ更新する（ここで初めて新しいコンテナが起動し、トラフィック切り替えが始まる）
-8. ALBのヘルスチェック成功（新Taskが正常応答すること）を確認する
-9. 8で失敗した場合は、ECSのデプロイ設定（最小健全率・最大率）に従って**旧Service（旧Task Definition）を維持**し、新Taskへは切り替えない
+7. migrationが成功した場合のみ、5と同じ新Task Definitionを使って一時Taskを起動し、`php artisan legal:check`（A-3、`App\Support\Legal\LegalConfigurationValidator`）を実行する。運営者名・問い合わせ先・利用規約/プライバシーポリシーのバージョン・発効日がプレースホルダー/draftのままであれば、ここでパイプラインを中断する（トラフィック切り替え前なので、旧Serviceは影響を受けない）
+8. legal:checkが成功した場合のみ、ECS Serviceを新Task Definitionへ更新する（ここで初めて新しいコンテナが起動し、トラフィック切り替えが始まる）
+9. ALBのヘルスチェック成功（新Taskが正常応答すること）を確認する
+10. 9で失敗した場合は、ECSのデプロイ設定（最小健全率・最大率）に従って**旧Service（旧Task Definition）を維持**し、新Taskへは切り替えない
+
+ステップ4・7・8の関係を明確にすると：**新Task Definition登録（4）→ そのTask DefinitionによるECS one-off taskでlegal:check実行（7、migration one-off taskの直後）→ 成功した場合のみECS Serviceを更新（8）→ ALBヘルスチェック（9）後にトラフィックが移行**という順序です。legal:checkは常駐Serviceの新Taskが起動した後ではなく、Service更新（8）より前の、独立した一時Task（migrationと同様の`aws ecs run-task`）として実行します。
 
 **同時実行防止**: 上記パイプライン自体をCI側でジョブ直列化し、2つのデプロイが同時に走らないようにする（Laravel標準の`migrate`コマンド自体に排他制御はないため、パイプライン側で担保する）。
 

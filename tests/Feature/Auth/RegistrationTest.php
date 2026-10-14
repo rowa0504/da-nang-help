@@ -22,6 +22,8 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password123',
             'phone' => null,
             'role' => 'customer',
+            'age_confirmed' => true,
+            'agree_to_legal' => true,
         ], $overrides);
     }
 
@@ -163,5 +165,60 @@ class RegistrationTest extends TestCase
         $this->post('/register', $this->validPayload());
 
         $this->assertNotSame($idBefore, session()->getId());
+    }
+
+    public function test_age_confirmed_checkbox_is_required(): void
+    {
+        $response = $this->post('/register', $this->validPayload(['age_confirmed' => false]));
+
+        $response->assertInvalid(['age_confirmed']);
+        $this->assertGuest();
+    }
+
+    public function test_agree_to_legal_checkbox_is_required(): void
+    {
+        $response = $this->post('/register', $this->validPayload(['agree_to_legal' => false]));
+
+        $response->assertInvalid(['agree_to_legal']);
+        $this->assertGuest();
+    }
+
+    public function test_successful_registration_stamps_consent_from_a_single_timestamp_and_server_side_config(): void
+    {
+        config(['legal.terms.version' => 'test-terms-v1', 'legal.privacy.version' => 'test-privacy-v1']);
+
+        $this->post('/register', $this->validPayload());
+
+        $user = User::firstWhere('email', 'jane@example.com');
+        $this->assertNotNull($user->age_confirmed_at);
+        $this->assertNotNull($user->terms_accepted_at);
+        $this->assertNotNull($user->privacy_acknowledged_at);
+        $this->assertSame('test-terms-v1', $user->terms_version);
+        $this->assertSame('test-privacy-v1', $user->privacy_version);
+        // One event, not three independently-timed ones.
+        $this->assertTrue($user->age_confirmed_at->equalTo($user->terms_accepted_at));
+        $this->assertTrue($user->age_confirmed_at->equalTo($user->privacy_acknowledged_at));
+    }
+
+    /**
+     * age_confirmed/agree_to_legal are only ever used as booleans gating
+     * the request; they are never mass-assigned onto the User model, and
+     * a client cannot forge the recorded version/timestamp by sending
+     * extra fields that happen to share a column name.
+     */
+    public function test_forged_consent_fields_in_the_request_body_are_ignored(): void
+    {
+        config(['legal.terms.version' => 'real-version']);
+
+        $this->post('/register', $this->validPayload([
+            'terms_version' => 'forged-version',
+            'terms_accepted_at' => '2000-01-01 00:00:00',
+            'age_confirmed_at' => '2000-01-01 00:00:00',
+        ]));
+
+        $user = User::firstWhere('email', 'jane@example.com');
+        $this->assertSame('real-version', $user->terms_version);
+        $this->assertTrue($user->terms_accepted_at->greaterThan(now()->subMinute()));
+        $this->assertTrue($user->age_confirmed_at->greaterThan(now()->subMinute()));
     }
 }

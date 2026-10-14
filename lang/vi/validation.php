@@ -26,6 +26,7 @@ return [
     'photo_limit_exceeded' => 'Yêu cầu dịch vụ chỉ được có tối đa :max ảnh.',
     'max_utf8_bytes' => 'Trường :attribute không được vượt quá :max byte khi mã hóa UTF-8.',
     'prohibited' => 'Trường :attribute không được phép nhập.',
+    'accepted' => 'Bạn phải đồng ý với :attribute.',
 
     'between' => [
         'numeric' => 'Trường :attribute phải nằm trong khoảng :min đến :max.',
@@ -53,5 +54,7 @@ return [
         'currency' => 'đơn vị tiền tệ',
         'message' => 'tin nhắn',
         'available_at' => 'thời gian có thể thực hiện',
+        'age_confirmed' => 'xác nhận tuổi',
+        'agree_to_legal' => 'đồng ý với Điều Khoản Dịch Vụ và Chính Sách Quyền Riêng Tư',
     ],
 ];

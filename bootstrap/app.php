@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'legal.configured' => \App\Http\Middleware\EnsureLegalConfigurationIsFinalized::class,
         ]);
 
         // Stage 1 puts an ALB directly in front of every Task, and the

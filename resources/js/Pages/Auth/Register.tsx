@@ -1,4 +1,4 @@
-import { useForm, Head } from '@inertiajs/react';
+import { useForm, Head, Link } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { PageHeader } from '@/Components/PageHeader';
@@ -15,6 +15,8 @@ type RegisterForm = {
     password_confirmation: string;
     phone: string;
     role: 'customer' | 'provider';
+    age_confirmed: boolean;
+    agree_to_legal: boolean;
 };
 
 export default function Register() {
@@ -26,6 +28,8 @@ export default function Register() {
         password_confirmation: '',
         phone: '',
         role: resolveInitialRole(window.location.search),
+        age_confirmed: false,
+        agree_to_legal: false,
     });
 
     function submit(e: FormEvent) {
@@ -105,6 +109,42 @@ export default function Register() {
                             autoComplete="new-password"
                         />
                     </FormField>
+
+                    <div>
+                        <label className="flex items-start gap-2 text-sm text-gray-800">
+                            <input
+                                type="checkbox"
+                                checked={data.age_confirmed}
+                                onChange={(e) => setData('age_confirmed', e.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600"
+                            />
+                            {t('auth.register.age_confirmed_label')}
+                        </label>
+                        {errors.age_confirmed && <p className="mt-1 text-sm text-red-600">{errors.age_confirmed}</p>}
+                    </div>
+
+                    <div>
+                        <label className="flex items-start gap-2 text-sm text-gray-800">
+                            <input
+                                type="checkbox"
+                                checked={data.agree_to_legal}
+                                onChange={(e) => setData('agree_to_legal', e.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600"
+                            />
+                            <span>
+                                {t('auth.register.agree_to_legal_prefix')}{' '}
+                                <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-brand-600 underline">
+                                    {t('nav.terms')}
+                                </Link>{' '}
+                                {t('auth.register.agree_to_legal_and')}{' '}
+                                <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="text-brand-600 underline">
+                                    {t('nav.privacy')}
+                                </Link>
+                                {t('auth.register.agree_to_legal_suffix')}
+                            </span>
+                        </label>
+                        {errors.agree_to_legal && <p className="mt-1 text-sm text-red-600">{errors.agree_to_legal}</p>}
+                    </div>
 
                     <Button type="submit" loading={processing} className="self-start">
                         {t('auth.register.submit')}

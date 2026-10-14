@@ -20,6 +20,7 @@ import { LocaleSwitcher } from '@/Components/LocaleSwitcher';
 import { MobileNav } from '@/Components/MobileNav';
 import { Alert } from '@/Components/Alert';
 import { Logo } from '@/Components/Logo';
+import { LegalFooter } from '@/Components/LegalFooter';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface NavItem {
@@ -150,6 +151,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             )}
 
             <main className="flex-1">{children}</main>
+
+            <LegalFooter />
         </div>
     );
 }

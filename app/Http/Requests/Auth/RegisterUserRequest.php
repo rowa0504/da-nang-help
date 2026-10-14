@@ -34,6 +34,14 @@ class RegisterUserRequest extends FormRequest
                 UserRole::Customer->value,
                 UserRole::Provider->value,
             ])],
+            // Two separate boxes, not one combined checkbox: age and legal
+            // consent are conceptually distinct facts, and keeping them
+            // separate avoids ambiguity about which one a validation error
+            // refers to. Neither value is persisted as submitted — only
+            // that they were both accepted; RegisterUserAction stamps the
+            // actual timestamp/version from the server side.
+            'age_confirmed' => ['required', 'accepted'],
+            'agree_to_legal' => ['required', 'accepted'],
         ];
     }
 }

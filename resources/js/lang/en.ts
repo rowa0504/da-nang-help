@@ -31,6 +31,8 @@ const en = {
     'nav.menu': 'Menu',
     'nav.login': 'Log in',
     'nav.register': 'Register',
+    'nav.terms': 'Terms of Service',
+    'nav.privacy': 'Privacy Policy',
     'nav.back_to_dashboard': 'Back to dashboard',
     'nav.back_to_list': 'Back to list',
     'nav.back_to_request': 'Back to request',
@@ -134,6 +136,13 @@ const en = {
     'auth.register.heading': 'Create an account',
     'auth.register.role_legend': 'I am a...',
     'auth.register.submit': 'Register',
+    'auth.register.age_confirmed_label': 'I confirm that I am 18 years of age or older.',
+    'auth.register.agree_to_legal_prefix': 'I have read and agree to the',
+    'auth.register.agree_to_legal_and': 'and the',
+    'auth.register.agree_to_legal_suffix': '.',
+
+    'legal.operator_label': 'Operator:',
+    'legal.effective_date_label': 'Effective date:',
 
     'dashboard.title': 'Dashboard',
     'dashboard.signed_in_as': 'Signed in as {name} ({email}) — role: {role}',

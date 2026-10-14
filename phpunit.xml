@@ -30,6 +30,8 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TRANSLATOR_DRIVER" value="fake"/>
+        <env name="LEGAL_OPERATOR_NAME" value="Test Operator"/>
+        <env name="LEGAL_CONTACT_EMAIL" value="privacy@example.com"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

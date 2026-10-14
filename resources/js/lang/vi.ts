@@ -34,6 +34,8 @@ const vi: TranslationDictionary = {
     'nav.menu': 'Menu',
     'nav.login': 'Đăng nhập',
     'nav.register': 'Đăng ký',
+    'nav.terms': 'Điều Khoản Dịch Vụ',
+    'nav.privacy': 'Chính Sách Quyền Riêng Tư',
     'nav.back_to_dashboard': 'Về bảng điều khiển',
     'nav.back_to_list': 'Về danh sách',
     'nav.back_to_request': 'Về yêu cầu',
@@ -137,6 +139,13 @@ const vi: TranslationDictionary = {
     'auth.register.heading': 'Tạo tài khoản',
     'auth.register.role_legend': 'Tôi là...',
     'auth.register.submit': 'Đăng ký',
+    'auth.register.age_confirmed_label': 'Tôi xác nhận đã đủ 18 tuổi trở lên.',
+    'auth.register.agree_to_legal_prefix': 'Tôi đã đọc và đồng ý với',
+    'auth.register.agree_to_legal_and': 'và',
+    'auth.register.agree_to_legal_suffix': '.',
+
+    'legal.operator_label': 'Đơn vị vận hành:',
+    'legal.effective_date_label': 'Ngày hiệu lực:',
 
     'dashboard.title': 'Bảng điều khiển',
     'dashboard.signed_in_as': 'Đang đăng nhập: {name} ({email}) — vai trò: {role}',

@@ -33,6 +33,8 @@ const ja: TranslationDictionary = {
     'nav.menu': 'メニュー',
     'nav.login': 'ログイン',
     'nav.register': '新規登録',
+    'nav.terms': '利用規約',
+    'nav.privacy': 'プライバシーポリシー',
     'nav.back_to_dashboard': 'ダッシュボードへ戻る',
     'nav.back_to_list': '一覧へ戻る',
     'nav.back_to_request': '依頼へ戻る',
@@ -136,6 +138,13 @@ const ja: TranslationDictionary = {
     'auth.register.heading': 'アカウントを作成',
     'auth.register.role_legend': 'あなたは...',
     'auth.register.submit': '登録する',
+    'auth.register.age_confirmed_label': '18歳以上であることを確認します。',
+    'auth.register.agree_to_legal_prefix': '',
+    'auth.register.agree_to_legal_and': 'および',
+    'auth.register.agree_to_legal_suffix': 'に同意します。',
+
+    'legal.operator_label': '運営者:',
+    'legal.effective_date_label': '施行日:',
 
     'dashboard.title': 'ダッシュボード',
     'dashboard.signed_in_as': 'ログイン中: {name}（{email}）— 役割: {role}',

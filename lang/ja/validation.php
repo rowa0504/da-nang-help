@@ -26,6 +26,7 @@ return [
     'photo_limit_exceeded' => '依頼に登録できる写真は最大:max枚までです。',
     'max_utf8_bytes' => ':attribute はUTF-8エンコードで:maxバイト以内にしてください。',
     'prohibited' => ':attribute は入力できません。',
+    'accepted' => ':attribute に同意してください。',
 
     'between' => [
         'numeric' => ':attribute は :min から :max の間で入力してください。',
@@ -53,5 +54,7 @@ return [
         'currency' => '通貨',
         'message' => 'メッセージ',
         'available_at' => '対応可能日時',
+        'age_confirmed' => '年齢確認',
+        'agree_to_legal' => '利用規約・プライバシーポリシーへの同意',
     ],
 ];
