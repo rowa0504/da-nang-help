@@ -25,3 +25,19 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Terraform (infra/terraform/)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+*.auto.tfvars
+*.auto.tfvars.json
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+backend.hcl
