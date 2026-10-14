@@ -148,6 +148,25 @@ flowchart LR
 
 **上振れ要因**（Pricing Calculatorの見積もりには現れない、実運用で発生し得るもの）: RDSのCPUクレジット超過、CloudWatch Logsのログ量増加、データ転送量の増加、ECSローリングデプロイ中に新旧Taskが一時的に2つ同時稼働する時間帯。これらを踏まえ、通常目標は$90/月以内、上限$100/月とし、AWS Budgetsのしきい値を4.5節のとおり調整します。
 
+### 4.4.1 AWS Pricing Calculatorによる確認（完了）
+
+4.6節が必須ゲートとするcalculator.awsでの共有見積もりを、0.5 vCPU/2GB構成（4.3.1節）で作成し、確認を完了しました。
+
+- **見積日**: 2026-10-14
+- **リージョン**: Singapore（ap-southeast-1）
+- **Pricing Calculator生値**: $85.95/月
+- **CloudWatch補正後**: 約$87.55/月（CalculatorのUI入力制約により、ログ取り込みを含むCloudWatchの費用を手動で$2/月へ補正）
+- **SES新料金との差額も考慮した値**: 約$87.61/月
+- **計画上の通常見込み**: 約$88/月
+- **安全側の運用目標**: $90/月以内
+- **上限**: $100/月
+- **含まないもの**: 税金、ドメイン登録・更新料
+- **変動費の扱い**: データ転送量・Amazon Translateの文字数・SESの送信数等、利用量に応じて増減する費用は、見積もり時点の低利用想定のまま固定せず、実請求（AWS Budgets、4.5節）で継続的に監視する
+
+**Price List API再計算（4.4節本文）との整合**: Fargate（$26.53）・ALB（$24.24）・Public IPv4（$10.95）・RDS（$21.01）という主要な固定費4項目は、Price List API再計算とPricing Calculatorの実測値が完全に一致しました。唯一の差分は、S3・ECR・Route 53・CloudWatch Logsの小計（Price List API再計算: 約$2.33／Pricing Calculator: 約$1.62）で、これは主にCloudWatchログ取り込みの手動補正の仕方の違いと、周辺少額費用の予備枠の取り方の違いによるものであり、構成選定を見直す必要のある乖離ではありません。
+
+**取り扱い注意**: Pricing Calculatorのエクスポート（CSV）にはAWSアカウントIDが含まれるため、CSVファイル自体はGit管理しません（このRELEASE_PLAN.mdには集計値のみ記載）。
+
 ### 4.5 AWS Budgets通知設定
 
 | しきい値 | 意味 |
@@ -160,7 +179,7 @@ AWS Budgetsは支出を自動停止する仕組みではなく通知のみであ
 
 ### 4.6 フェーズBの作業項目
 
-1. AWS Pricing Calculator（calculator.aws）で0.5vCPU/2GB構成の共有見積もりを作成し、4.4節のPrice List API再計算（約$86.61〜92.56/月）と大きく乖離しないことを確認する（**実リソース作成・Terraform適用直前の必須ゲート**。$100/月を明確に超える場合は着手前に構成を見直す）
+1. ~~AWS Pricing Calculator（calculator.aws）で0.5vCPU/2GB構成の共有見積もりを作成し、4.4節のPrice List API再計算と大きく乖離しないことを確認する~~ **完了（2026-10-14、4.4.1節）**。計画上の通常見込み約$88/月・安全側の運用目標$90/月以内・上限$100/月。実リソース作成・Terraform適用前に必要な確認は満たされました
 2. AWS Budgets通知の設定（4.5）
 3. インフラはTerraform等のIaCで管理する（手動コンソール操作に頼らず、7節の一時検証環境を確実に作成・削除できるようにするため）。state管理方式の確定内容は4.7節を参照
 4. VPC・サブネットの作成。**AZ要件に注意**:
