@@ -221,19 +221,28 @@ infra/terraform/
     dns/          # Route 53, ACM
     monitoring/   # CloudWatch Logs, Alarms, Budgets
   environments/
-    production/
-      backend.tf
-      main.tf            # モジュール呼び出し
+    shared/              # production/stagingが共有するリソース（現時点ではECRのみ）
+      backend.tf           # state key = "shared/terraform.tfstate"
+      main.tf
       variables.tf
-      terraform.tfvars   # 機密値を含まない設定のみ、Git管理
+      terraform.tfvars
+    production/
+      backend.tf           # state key = "production/terraform.tfstate"
+      main.tf              # モジュール呼び出し。ECRは `data "aws_ecr_repository"` で
+      variables.tf          # 名前参照のみ（sharedのstateを直接読み取らない）
+      terraform.tfvars      # 機密値を含まない設定のみ、Git管理
     staging/
-      backend.tf         # productionと別のstate key
-      main.tf            # 同じmodulesを再利用、7節の一時検証用
+      backend.tf             # state key = "staging/terraform.tfstate"
+      main.tf                # 同じmodulesを再利用、7節の一時検証用
       variables.tf
       terraform.tfvars
 ```
 
 production/stagingはTerraform workspaceで切り替えるのではなく、**ディレクトリと`backend.tf`自体を分離**します。workspaceはバックエンド設定を共有したまま状態ファイルだけ切り替える仕組みのため、誤ったworkspaceに対してapplyしてしまう事故のリスクがあります。
+
+**`shared`を追加した理由**: ECR（コンテナイメージ）はproduction/staging間で同一アーティファクトを共有する設計（同じcommit SHAのイメージをstagingで検証後、同じイメージをproductionへ promote）のため、production/stagingそれぞれのstateから同じECRリポジトリを作成・所有しようとすると競合します。`shared`で一度だけ作成し、production/stagingは`terraform_remote_state`（state全体の読み取り権限が必要になる）ではなく、リポジトリ名を指定した`data "aws_ecr_repository"`参照のみで利用します。
+
+**apply順序**: 依存関係上、**`shared`→`production`／`staging`の順**でなければなりません（`shared`のECRが存在しない状態で`production`/`staging`の`plan`を実行すると、`data "aws_ecr_repository"`の参照が失敗します。これは想定どおりの挙動です）。`destroy`はこの逆順（`production`/`staging`→`shared`）で行います。
 
 #### 4.7.2 Stateバックエンド
 
@@ -251,6 +260,7 @@ terraform {
   }
 }
 # environments/staging/backend.tf は bucket は同一、key = "staging/terraform.tfstate" のみ変更
+# environments/shared/backend.tf は bucket は同一、key = "shared/terraform.tfstate" のみ変更
 ```
 
 - **バージョン制約**: `>= 1.10.0`だけでは将来のTerraform 2.x系も許容してしまうため、`< 2.0.0`の上限を明記する
@@ -338,7 +348,7 @@ override.tf
 
 1. テスト（PHPUnit・Vitest・`tsc --noEmit`・lint）
 2. Dockerビルド（4.3節のマルチステージビルド。Nginx・PHP-FPM双方のイメージを同一のフロントエンド資産から作成）
-3. **commit SHAの不変タグ**でECRへpush（`latest`タグも合わせて更新するが、ロールバック時に参照するのは常にSHAタグ。8節参照）
+3. **`sha-<full-commit-sha>`タグ**でECRへpush（`latest`タグは作成しない。Terraform第2段階のECR lifecycle policyがsha-タグのみを対象にタグ付き画像の世代管理を行うため。8節参照）
 4. 新しいECS Task Definitionを登録する（**この時点ではまだ稼働中のServiceへは反映しない**）
 5. 4で登録した新Task Definitionを使って、**migration one-off task**（`aws ecs run-task`、常駐Serviceとは別の一時起動）として`php artisan migrate --force`を実行する
 6. migrationの成功を待機する。**失敗した場合はここでパイプラインを中断し、以降のステップへ進まない**（Task Definitionは4で登録済みだが、ECS Serviceは古いTask Definitionのまま稼働を継続している — 「登録」と「切り替え」を分けているため、失敗時に何も壊れていない）
@@ -390,7 +400,7 @@ override.tf
 
 ### 8.1 基本方針
 
-1. **アプリケーションのロールバック（第一手段）**: ECSのTask定義を**直前のGit commit SHAタグ付きイメージ**へ戻す。C-2により`latest`に加えて各ビルドがcommit SHAの不変タグでECRへpushされているため、特定のコミット単位で確実に切り戻せる
+1. **アプリケーションのロールバック（第一手段）**: ECSのTask定義を**直前のGit commit SHAタグ付きイメージ**へ戻す。C-2により各ビルドが`sha-<full-commit-sha>`の不変タグでECRへpushされているため（`latest`タグは作成しない）、特定のコミット単位で確実に切り戻せる
 2. **DBスキーマ変更は原則として後方互換マイグレーション＋forward fixで対応する**: 新しいコードが前のDBスキーマでも、前のコードが新しいDBスキーマでも、どちらでも動作する状態を維持しながら進める（expand/contract方式）。問題が見つかった場合は`down()`で巻き戻すのではなく、**前進方向の修正（forward fix）を新しいマイグレーション・新しいデプロイとして適用する**
 3. **破壊的なスキーマ変更（カラム削除・型変更等）は、expand/contract方式で複数リリースに分割する**: 例）(1)新カラムを追加しつつ旧カラムも残す→(2)アプリケーションを新カラム参照へ切り替える→(3)旧カラムが不要になったことを確認した別リリースで削除する、という順序を踏み、1回のデプロイで破壊的変更とアプリ切り替えを同時に行わない
 4. **`migrate:rollback`は、内容を個別に確認した場合に限り、最終手段の一つとして使用可**（実行前に必ずバックアップ（D-1）を取得する）

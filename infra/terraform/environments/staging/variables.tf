@@ -52,3 +52,35 @@ variable "private_subnet_cidrs" {
     error_message = "private_subnet_cidrs must have exactly one CIDR per entry in availability_zones."
   }
 }
+
+variable "ecr_repository_name" {
+  description = "Name of the shared ECR repository (owned by environments/shared), looked up by data source."
+  type        = string
+}
+
+variable "photos_bucket_name" {
+  description = "Globally-unique S3 bucket name for Service Request photos."
+  type        = string
+
+  validation {
+    condition     = !startswith(var.photos_bucket_name, "REPLACE_WITH_")
+    error_message = "photos_bucket_name still has its placeholder value. Set a real, globally-unique bucket name before running plan/apply."
+  }
+}
+
+variable "photos_bucket_force_destroy" {
+  description = "Whether the photos bucket can be destroyed while non-empty. staging is a temporary verification environment, so this stays true."
+  type        = bool
+  default     = true
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch Logs retention, shared by all 4 containers."
+  type        = number
+  default     = 30
+}
+
+variable "ssm_path_prefix" {
+  description = "SSM parameter path prefix the Task Execution Role may read, e.g. \"/dananghelp/staging\"."
+  type        = string
+}

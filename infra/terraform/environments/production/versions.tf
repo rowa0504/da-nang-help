@@ -4,11 +4,12 @@ terraform {
   required_providers {
     aws = {
       source = "hashicorp/aws"
-      # Floor is the latest published version as of 2026-10-14
-      # (confirmed against the provider's GitHub releases). No
-      # `terraform init` has been run against this configuration yet, so
-      # there is no .terraform.lock.hcl — once init runs, pin the exact
-      # resolved version there. See infra/terraform/README.md.
+      # 6.68.0 is kept as the floor — it was the latest published
+      # version as of 2026-10-14, when this constraint was set; the
+      # floor is not bumped on every subsequent release. `terraform init
+      # -backend=false` has since been run, resolving 6.69.0 (within
+      # this constraint), pinned in the committed .terraform.lock.hcl.
+      # See infra/terraform/README.md.
       version = ">= 6.68.0, < 7.0.0"
     }
   }

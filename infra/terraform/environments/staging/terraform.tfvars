@@ -20,3 +20,13 @@ private_subnet_cidrs = [
   "10.1.10.0/24",
   "10.1.11.0/24",
 ]
+
+ecr_repository_name = "dananghelp-app"
+
+# Must be globally unique. Replace before running plan/apply — the
+# variable validation in variables.tf rejects this placeholder.
+photos_bucket_name = "REPLACE_WITH_UNIQUE_STAGING_PHOTOS_BUCKET_NAME"
+
+photos_bucket_force_destroy = true
+log_retention_days          = 30
+ssm_path_prefix             = "/dananghelp/staging"

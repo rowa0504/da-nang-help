@@ -1,0 +1,15 @@
+# Copy this file to backend.hcl (gitignored — never commit the real one)
+# and fill in the real, globally-unique bucket name once it has been
+# created and verified by infra/terraform/bootstrap/create-state-bucket.sh.
+#
+# key MUST stay "shared/terraform.tfstate" for THIS environment
+# directory. Never copy a backend.hcl from environments/production/ or
+# environments/staging/ into this directory, or vice versa — doing so
+# would point this environment at the wrong state file. Visually
+# confirm the `key` value below matches the directory you are in before
+# running `terraform init -backend-config=backend.hcl`.
+bucket       = "REPLACE_WITH_UNIQUE_STATE_BUCKET_NAME"
+key          = "shared/terraform.tfstate"
+region       = "ap-southeast-1"
+encrypt      = true
+use_lockfile = true
