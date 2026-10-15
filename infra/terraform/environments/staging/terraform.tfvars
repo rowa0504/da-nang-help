@@ -25,7 +25,7 @@ ecr_repository_name = "dananghelp-app"
 
 # Must be globally unique. Replace before running plan/apply — the
 # variable validation in variables.tf rejects this placeholder.
-photos_bucket_name = "REPLACE_WITH_UNIQUE_STAGING_PHOTOS_BUCKET_NAME"
+photos_bucket_name = "dananghelp-staging-photos-fd3e306cc30d"
 
 photos_bucket_force_destroy = true
 log_retention_days          = 30
