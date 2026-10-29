@@ -29,3 +29,19 @@ output "task_execution_role_arn" {
 output "task_role_arn" {
   value = module.iam.task_role_arn
 }
+
+output "alb_security_group_id" {
+  value = module.security.alb_security_group_id
+}
+
+output "ecs_task_security_group_id" {
+  value = module.security.ecs_task_security_group_id
+}
+
+output "rds_security_group_id" {
+  value = module.security.rds_security_group_id
+}
+
+output "db_subnet_group_name" {
+  value = module.security.db_subnet_group_name
+}

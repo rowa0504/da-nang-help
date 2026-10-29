@@ -2,18 +2,19 @@
 
 このディレクトリはAWSインフラをTerraformで管理するためのコードです。詳細な方針・コスト試算・state管理設計は[docs/RELEASE_PLAN.md](../../docs/RELEASE_PLAN.md)の4節を参照してください（本READMEは実行手順に専念します）。
 
-## 現在の実装範囲（第1〜2段階）
+## 現在の実装範囲（第1〜3A段階）
 
 - `modules/network/`: VPC、public subnet×2、private subnet×2、Internet Gateway、ルートテーブル（NAT Gatewayなし）
 - `modules/ecr/`: コンテナイメージ用ECRリポジトリ（IMMUTABLE・scan_on_push・lifecycle policy）
 - `modules/s3/`: Service Request写真用S3バケット（TLS強制・BucketOwnerEnforced・SSE-S3）
 - `modules/logging/`: コンテナ（nginx/php-fpm/worker/scheduler）ごとのCloudWatch Log Group
 - `modules/iam/`: ECS Task Execution Role・Task Role
+- `modules/security/`: ALB/ECS Task/RDS用Security Group、RDS DB Subnet Group（詳細は後述の「第3段階の分割（3A〜3D）」参照）
 - `environments/shared/`: 上記`ecr`モジュールのみを呼び出すルート構成（ECRはこの環境が唯一所有する。後述）
-- `environments/production/`・`environments/staging/`: `network`・`s3`・`logging`・`iam`モジュールを呼び出し、ECRは`data "aws_ecr_repository"`で参照するルート構成
+- `environments/production/`・`environments/staging/`: `network`・`s3`・`logging`・`iam`・`security`モジュールを呼び出し、ECRは`data "aws_ecr_repository"`で参照するルート構成
 - `bootstrap/create-state-bucket.sh`: Terraform state用S3バケットの作成・検証スクリプト
 
-RDS・ECS・ALB・Route 53等は未実装です。レビュー後、段階的に追加します。
+RDS本体・ALB本体・ACM・Route 53・ECS（Cluster/Task Definition/Service）は未実装です。レビュー後、段階的に追加します。
 
 ## ディレクトリ構成
 
@@ -25,12 +26,47 @@ infra/terraform/
 │   ├── ecr/
 │   ├── s3/
 │   ├── logging/
-│   └── iam/
+│   ├── iam/
+│   └── security/
 └── environments/
     ├── shared/
     ├── production/
     └── staging/
 ```
+
+## 第3段階の分割（3A〜3D）
+
+継続課金の開始タイミングと依存関係を踏まえ、第3段階は一括実装せず4段階に分割します。
+
+| 段階 | 対象 | apply時の継続課金 |
+|---|---|---|
+| 3A（実装済み） | Security Group（ALB/ECS Task/RDS）、RDS DB Subnet Group | 原則なし |
+| 3B | RDS MySQL | 約$21/月〜 |
+| 3C | ACM、Route 53、ALB | 約$25〜36/月〜 |
+| 3D | ECS Cluster、Task Definition、Service | Fargate約$26.5/月〜 |
+
+### 3A: Security Group・DB Subnet Groupの設計
+
+`modules/security/`が作成するSecurity Group間の通信経路:
+
+| SG | 方向 | プロトコル/ポート | 相手 |
+|---|---|---|---|
+| ALB | ingress | TCP 80 | `0.0.0.0/0`（HTTPSへのリダイレクト専用エントリポイント。リダイレクト自体の設定は3CのALBリスナーで行う） |
+| ALB | ingress | TCP 443 | `0.0.0.0/0` |
+| ALB | egress | TCP `container_port`（既定80） | ECS Task SG |
+| ECS Task | ingress | TCP `container_port`（既定80） | ALB SG |
+| ECS Task | egress | TCP 443 | `0.0.0.0/0`（ECR・SSM・CloudWatch Logs・S3・Translateの各AWS APIエンドポイント。SESは下記参照） |
+| ECS Task | egress | TCP 3306 | RDS SG |
+| RDS | ingress | TCP 3306 | ECS Task SG |
+| RDS | egress | （なし） | — |
+
+**DNS（53番）ルールは意図的に作りません。** VPCのAmazon提供DNS Resolver（各VPCのbase+2アドレス）宛のクエリはSecurity Groupのルール評価を経由しない特別経路のため、egressルールは不要です。
+
+**SESの通信方式（HTTPS API or SMTP）は3Dまでに確定する未決課題です。** HTTPS API方式であれば上記443番のegressルールで既にカバーされ追加は不要です。SMTP方式を採用する場合は、その時点で必要なegressポート（587/465等）を個別に追加します。
+
+**RDS SGにegressルールを作らない理由**: RDSインスタンス自身が能動的に外部接続を開始する通信は、現時点の設計では想定していません。将来、DBインスタンス自身が外部接続を開始する機能を採用する場合は、その通信要件を確認して必要なegressルールだけを追加します。
+
+**実装・apply後の検証**: `terraform plan`および`aws ec2 describe-security-groups`で、各SG（ALB・ECS Task・RDS）について宣言したルール数と実際のルール数が一致し、意図しないallow-all egressルールが存在しないことを確認してください。
 
 ## `shared`環境とapply順序（重要）
 

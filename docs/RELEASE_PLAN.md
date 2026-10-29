@@ -203,6 +203,51 @@ AWS Budgetsは支出を自動停止する仕組みではなく通知のみであ
 13. Route 53 Hosted Zoneとドメインの紐付け
 14. CloudWatch Logsのロググループにretention期間を設定（無期限保存を避ける）
 
+### 4.6.1 第3段階の分割（3A〜3D、確定事項）
+
+4.6節5〜13の各項目（Security Group、RDS、ACM/Route 53/ALB、ECS）は一括実装せず、継続課金の開始タイミングと依存関係に沿って4段階に分割します。
+
+| 段階 | 対象 | apply時の継続課金 |
+|---|---|---|
+| 3A（実装済み） | Security Group（ALB/ECS Task/RDS）、RDS DB Subnet Group | 原則なし |
+| 3B | RDS MySQL | 約$21/月〜 |
+| 3C | ACM、Route 53、ALB | 約$25〜36/月〜 |
+| 3D | ECS Cluster、Task Definition、Service | Fargate約$26.5/月〜 |
+
+ALB・Public IPv4・FargateはApply直後から時間課金が発生する一方、本番ドメイン・ACM証明書のDNS検証先・本番Dockerイメージ・SecureStringパラメータ・RDS接続情報・運営者名/問い合わせ先/発効日（法務上の表示事項）が未確定のため、3C/3Dを先行させると「動かせない状態の固定費」だけが発生します。したがって課金の少ない3A（Security Group・DB Subnet Group）から着手します。
+
+#### 3Aの設計（`modules/security/`）
+
+| SG | 方向 | プロトコル/ポート | 相手 |
+|---|---|---|---|
+| ALB | ingress | TCP 80 | `0.0.0.0/0`（HTTPSへのリダイレクト専用エントリポイント。リダイレクト自体の設定は3CのALBリスナーで行う） |
+| ALB | ingress | TCP 443 | `0.0.0.0/0` |
+| ALB | egress | TCP `container_port`（既定80） | ECS Task SG |
+| ECS Task | ingress | TCP `container_port`（既定80） | ALB SG |
+| ECS Task | egress | TCP 443 | `0.0.0.0/0`（ECR・SSM・CloudWatch Logs・S3・Translateの各AWS APIエンドポイント。SESは下記参照） |
+| ECS Task | egress | TCP 3306 | RDS SG |
+| RDS | ingress | TCP 3306 | ECS Task SG |
+| RDS | egress | （なし） | — |
+
+Stage 1でNAT Gatewayを作らずFargate TaskにPublic IPを持たせる構成（4.2節）のため、ECS Task SGのegressはIP/CIDR単位では絞れません。宛先は広く許可する一方、プロトコル・ポートは443（AWS API）と3306（RDS）のみに限定し、実際の防御はALB経由のingress制限とIAM最小権限（4.6節6項）に委ねます。
+
+**DNS（53番）ルールは意図的に作りません。** VPCのAmazon提供DNS Resolver（各VPCのbase+2アドレス）宛のクエリはSecurity Groupのルール評価を経由しない特別経路のため、egressルールは不要です。
+
+**SESの通信方式（HTTPS API or SMTP）は3Dまでに確定する未決課題です。** HTTPS API方式であれば上記443番のegressルールで既にカバーされ追加は不要です。SMTP方式を採用する場合は、その時点で必要なegressポート（587/465等）を個別に追加します。
+
+**RDS SGにegressルールを作らない理由**: RDSインスタンス自身が能動的に外部接続を開始する通信は、現時点の設計では想定していません。将来、DBインスタンス自身が外部接続を開始する機能を採用する場合は、その通信要件を確認して必要なegressルールだけを追加します。
+
+**実装・apply後の検証**: `terraform plan`および`aws ec2 describe-security-groups`で、各SG（ALB・ECS Task・RDS）について宣言したルール数と実際のルール数が一致し、意図しないallow-all egressルールが存在しないことを確認します。
+
+#### 3B着手前の未解決課題
+
+RDSのmaster passwordを通常のTerraform変数で渡すとstateへ保存される可能性があり、既存方針（アプリケーション秘密値をTerraform stateへ保存しない）と衝突します。3B着手前に以下いずれかの方式を公式仕様まで確認した上で確定します。
+
+1. RDSによるmaster password管理＋Secrets Manager
+2. Terraform 1.10とAWS Provider v6のephemeral/write-only対応
+
+（手動初期作成はIaC管理が崩れるため採用しません。）
+
 ### 4.7 Terraform state管理設計（確定）
 
 #### 4.7.1 ディレクトリ構成

@@ -42,3 +42,12 @@ module "iam" {
   log_group_stream_arns = values(module.logging.log_group_stream_arns)
   ssm_path_prefix       = var.ssm_path_prefix
 }
+
+module "security" {
+  source = "../../modules/security"
+
+  project            = var.project
+  environment        = var.environment
+  vpc_id             = module.network.vpc_id
+  private_subnet_ids = module.network.private_subnet_ids
+}
