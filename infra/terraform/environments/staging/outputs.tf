@@ -45,3 +45,19 @@ output "rds_security_group_id" {
 output "db_subnet_group_name" {
   value = module.security.db_subnet_group_name
 }
+
+output "rds_instance_identifier" {
+  value = module.rds.db_instance_identifier
+}
+
+output "rds_instance_address" {
+  value = module.rds.db_instance_address
+}
+
+output "rds_instance_port" {
+  value = module.rds.db_instance_port
+}
+
+output "rds_ssm_parameter_names" {
+  value = module.rds.ssm_parameter_names
+}

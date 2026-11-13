@@ -84,3 +84,52 @@ variable "ssm_path_prefix" {
   description = "SSM parameter path prefix the Task Execution Role may read, e.g. \"/dananghelp/staging\"."
   type        = string
 }
+
+variable "master_username" {
+  description = "RDS master username (see modules/rds variable for the reserved-name validation). Not the application's runtime DB user."
+  type        = string
+}
+
+variable "db_name" {
+  description = "Initial database name created on the RDS instance."
+  type        = string
+}
+
+variable "db_password_version" {
+  description = "Shared version marker for the RDS master password's write-only attributes. Increment to rotate."
+  type        = number
+  default     = 1
+}
+
+variable "rds_allocated_storage" {
+  description = "RDS storage size in GiB."
+  type        = number
+  default     = 20
+}
+
+variable "rds_backup_retention_period" {
+  description = "RDS automated backup retention, in days."
+  type        = number
+  default     = 7
+}
+
+variable "rds_deletion_protection" {
+  description = "staging is a temporary verification environment, so this stays false (so a temporary apply can still be destroyed normally)."
+  type        = bool
+  default     = false
+}
+
+variable "rds_final_snapshot_identifier" {
+  description = "Unique final snapshot identifier used on destroy. Update explicitly at deletion-approval time."
+  type        = string
+}
+
+variable "rds_backup_window" {
+  description = "Daily automated backup window, UTC, format HH:MM-HH:MM."
+  type        = string
+}
+
+variable "rds_maintenance_window" {
+  description = "Weekly maintenance window, UTC, format ddd:HH:MM-ddd:HH:MM."
+  type        = string
+}

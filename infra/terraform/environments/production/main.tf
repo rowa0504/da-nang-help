@@ -51,3 +51,21 @@ module "security" {
   vpc_id             = module.network.vpc_id
   private_subnet_ids = module.network.private_subnet_ids
 }
+
+module "rds" {
+  source = "../../modules/rds"
+
+  project                   = var.project
+  environment               = var.environment
+  db_subnet_group_name      = module.security.db_subnet_group_name
+  rds_security_group_id     = module.security.rds_security_group_id
+  master_username           = var.master_username
+  db_name                   = var.db_name
+  db_password_version       = var.db_password_version
+  allocated_storage         = var.rds_allocated_storage
+  backup_retention_period   = var.rds_backup_retention_period
+  deletion_protection       = var.rds_deletion_protection
+  final_snapshot_identifier = var.rds_final_snapshot_identifier
+  backup_window             = var.rds_backup_window
+  maintenance_window        = var.rds_maintenance_window
+}

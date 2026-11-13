@@ -239,14 +239,80 @@ Stage 1でNAT Gatewayを作らずFargate TaskにPublic IPを持たせる構成�
 
 **実装・apply後の検証**: `terraform plan`および`aws ec2 describe-security-groups`で、各SG（ALB・ECS Task・RDS）について宣言したルール数と実際のルール数が一致し、意図しないallow-all egressルールが存在しないことを確認します。
 
-#### 3B着手前の未解決課題
+#### 3Bの設計（`modules/rds/`、確定事項）
 
-RDSのmaster passwordを通常のTerraform変数で渡すとstateへ保存される可能性があり、既存方針（アプリケーション秘密値をTerraform stateへ保存しない）と衝突します。3B着手前に以下いずれかの方式を公式仕様まで確認した上で確定します。
+**master password方式の決定**: RDSのmaster passwordは、Terraform 1.11+のwrite-only属性（`password_wo`/`password_wo_version`、SSMの`value_wo`/`value_wo_version`）と`ephemeral "random_password"`リソースの組み合わせで管理することに決定しました。RDS管理のSecrets Manager方式（`manage_master_user_password = true`）は、既存のSSM Parameter Store経由のシークレット注入構成との不整合（追加課金、Task Execution Roleへの追加権限、7日自動ローテーションへのECS側追従負担）を理由に不採用としました。手動初期作成はIaC管理が崩れるため不採用です。
 
-1. RDSによるmaster password管理＋Secrets Manager
-2. Terraform 1.10とAWS Provider v6のephemeral/write-only対応
+```hcl
+ephemeral "random_password" "db_master_password" {
+  length           = 28
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+```
 
-（手動初期作成はIaC管理が崩れるため採用しません。）
+`password_wo_version`（RDS）と`value_wo_version`（SSM）は共通の`db_password_version`変数で管理し、通常の`password`・`value`属性は使用しません。生成されたパスワードはplan・state・output・ログのいずれにも保存されません。
+
+**engine_versionの決定（MySQL 8.4.11）**: 当初候補のMySQL 8.0.46は、AWS公式ドキュメント確認の結果既にRDS Extended Support（追加課金）の対象であることが判明したため不採用としました。MySQL 8.4（major）のRDS標準サポート終了日は2029-07-31で、新規構築時点でExtended Support料金は発生しません。採用前にローカルDocker（`mysql:8.4.11`、既存`docker-compose.yml`は変更せず一時的な別Compose projectで検証）でLaravel互換性を確認済みです: `SELECT VERSION()`=`8.4.11`、`sql_mode`/`character_set_server`/`collation_server`は既存MySQL 8.0環境と完全一致、`migrate:fresh --seed`成功、MySQL接続を明示した`php artisan test`が586件全件成功（2598 assertions）。8.4.11自体のマイナーバージョン単位の標準サポート終了日は2027-08-21のため、その時期までに8.4系の新しいマイナーバージョンへの更新を計画します。
+
+**`engine_lifecycle_support`の明示**: 既定値（Extended Supportへの自動移行を許可）のままにせず、`"open-source-rds-extended-support-disabled"`を明示します。2029年のメジャーバージョン標準サポート終了までにアップグレードしなかった場合、自動課金ではなく明示的な対応判断を強制します。
+
+**RDS設定の確定値**:
+
+```
+engine                               = "mysql"
+engine_version                       = "8.4.11"
+engine_lifecycle_support              = "open-source-rds-extended-support-disabled"
+instance_class                       = "db.t4g.micro"
+allocated_storage                    = 20
+max_allocated_storage                = 0   # storage autoscalingは今回無効
+storage_type                         = "gp3"
+storage_encrypted                    = true
+multi_az                             = false
+publicly_accessible                  = false
+port                                 = 3306
+auto_minor_version_upgrade           = true
+apply_immediately                    = false
+backup_retention_period              = 7
+deletion_protection                  = var.deletion_protection   # production=true, staging=false
+skip_final_snapshot                  = false
+final_snapshot_identifier            = var.final_snapshot_identifier
+performance_insights_enabled         = false
+monitoring_interval                  = 0
+iam_database_authentication_enabled  = false
+copy_tags_to_snapshot                = true
+```
+
+`deletion_protection`・`prevent_destroy`はモジュール内に固定せず変数化しています（同じモジュールをproduction/stagingで再利用するため、将来のstaging一時apply時に通常のdestroyができなくなることを避けるため）。
+
+**SSM Parameter構成**:
+
+| パラメータ名 | 型 | 値 |
+|---|---|---|
+| `/dananghelp/<environment>/DB_HOST` | String | RDSエンドポイント |
+| `/dananghelp/<environment>/DB_PORT` | String | `3306` |
+| `/dananghelp/<environment>/DB_DATABASE` | String | DB名 |
+| `/dananghelp/<environment>/DB_MASTER_USERNAME` | String | masterユーザー名 |
+| `/dananghelp/<environment>/DB_MASTER_PASSWORD` | SecureString（write-only） | masterパスワード |
+
+通常アプリ用の`DB_USERNAME`・`DB_PASSWORD`（最小権限の専用DBユーザー）は3Bでは作成せず、3Dで確定します。
+
+**公開ゲート: Task Execution Role分離（3D完了まで必須）**: 既存のECS Task Execution Roleは`ssm:GetParameters`を`/dananghelp/<environment>/*`のワイルドカードで許可しています。ECS Task Definition/Serviceがまだ存在しないため現時点で実害はありませんが、以下の分離が完了するまで本番ECS Serviceを起動してはいけません。
+
+- 通常Service用Execution Role: `DB_HOST`・`DB_PORT`・`DB_DATABASE`・アプリ専用`DB_USERNAME`・アプリ専用`DB_PASSWORD`のみ読み取り可能。`DB_MASTER_USERNAME`/`DB_MASTER_PASSWORD`への権限なし
+- DB初期化用一時TaskのExecution Role: `DB_MASTER_USERNAME`・`DB_MASTER_PASSWORD`と必要な接続情報のみ読み取り可能。通常Serviceとは別のIAMロールとして新設
+- 一時Task終了後もmaster認証情報をコンテナログへ出力しない
+
+**バックアップ・メンテナンスウィンドウ**（production/stagingで重複しない設定、いずれもダナン時間UTC+7の深夜帯）:
+
+| 環境 | backup_window（UTC） | backup_window（ICT） | maintenance_window（UTC） | maintenance_window（ICT） |
+|---|---|---|---|---|
+| production | `19:00-19:30` | 02:00-02:30 | `mon:20:00-mon:21:00` | 月 03:00-04:00 |
+| staging | `19:30-20:00` | 02:30-03:00 | `tue:20:30-tue:21:30` | 火 03:30-04:30 |
+
+**部分失敗時の復旧方針**: `db_password_version`を増やして`plan`で両リソースの変更が計画されていることを確認した上で`apply`する。片方しか対象にならない場合は中止して個別調査。`-target`による片側更新は禁止。`apply`成功後は実際のDB接続確認まで行う。
+
+**Terraformバージョン**: `required_version = ">= 1.11.0, < 2.0.0"`（write-only属性の最小対応バージョン1.11.0、2025-02-27）。実際の検証コンテナは`hashicorp/terraform:1.17.1`で固定。`hashicorp/random`プロバイダを`>= 3.7.0, < 4.0.0`で追加（ephemeral `random_password`の最小対応バージョン3.7.0、2025-02-25）。AWS Provider制約は既存方針（`>= 6.68.0, < 7.0.0`）を維持。今回のラウンドはファイル作成・静的検査（`terraform fmt`・`git diff --check`）までで、lockファイル更新・`terraform init`・`plan`・`apply`はまだ実行していません。
 
 ### 4.7 Terraform state管理設計（確定）
 
